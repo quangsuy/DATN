@@ -1,0 +1,43 @@
+// =============================================================
+// uart_pi.h  -  UART2 bridge between Coordinator and Pi
+// UART2: GPIO16 (RX from Pi TX), GPIO17 (TX to Pi RX)
+// Baud: 115200, 8N1 (matches open_serial_transport default)
+// =============================================================
+#pragma once
+#include <stdint.h>
+#include <stdbool.h>
+#include "protocol.h"
+
+// Hardware assignment for 38-pin ESP32 DevKit
+#define UART_PI_PORT    2       // HardwareSerial port number
+#define UART_PI_RX_PIN  16
+#define UART_PI_TX_PIN  17
+#define UART_PI_BAUD    115200
+
+// Initialise UART2
+void uart_pi_init(void);
+
+// Read one newline-terminated line from UART2.
+// Returns number of bytes written to buf (excluding '\n'), or 0 on timeout.
+// Call from uart_rx_task only.
+uint16_t uart_pi_readline(char *buf, uint16_t max_len, uint32_t timeout_ms);
+
+// Parse a raw JSON line into a PiCommand.
+// Returns true on success, false if malformed or version mismatch.
+bool uart_pi_parse(const char *buf, uint16_t len, PiCommand *out_cmd);
+
+// Enqueue a pre-formatted PiResponse for transmission by uart_tx_task.
+bool uart_pi_enqueue_response(const PiResponse *resp);
+
+// Build and enqueue an ACK response for a given sequence number.
+void uart_pi_send_ack(uint16_t seq, const char *status_str);
+
+// Build and enqueue a robot_status event to Pi.
+void uart_pi_send_robot_status(uint8_t robot_id, const char *status_str,
+                               const char *position, uint8_t battery);
+
+// Build and enqueue a fault event to Pi.
+void uart_pi_send_fault(const char *message, int robot_id);  // robot_id=-1 if system
+
+// Build and enqueue a system_info / telemetry event to Pi.
+void uart_pi_send_system_info(uint8_t active_peers, uint32_t free_heap);

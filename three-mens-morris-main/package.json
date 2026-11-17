@@ -1,0 +1,31 @@
+{
+  "name": "three-mens-morris",
+  "description": "Three men's morris is an abstract strategy game played on a three by three board (counting lines) that is similar to tic-tac-toe",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "dev": "set \"NODE_ENV=development\" && nodemon",
+    "start": "set \"NODE_ENV=production\" && ts-node --transpile-only ./src/server.ts",
+    "build": "cd client && npm ci && npm run build",
+    "build:server": "rimraf build && set \"NODE_ENV=production\" && tsc -p tsconfig.json",
+    "start:client": "cd client && set PORT=3006 && set \"NODE_ENV=development\" && npm run start",
+    "build:client": "cd client && npm run build"
+  },
+  "dependencies": {
+    "debug": "~4.3.4",
+    "express": "~4.17.3",
+    "http-errors": "~2.0.0",
+    "morgan": "~1.9.1",
+    "reflect-metadata": "^0.1.13",
+    "rimraf": "^3.0.2",
+    "socket.io": "^4.5.4",
+    "ts-node": "^10.7.0",
+    "ejs": "^3.1.8"
+  },
+  "devDependencies": {
+    "@types/node": "^17.0.21",
+    "nodemon": "^2.0.15",
+    "typescript": "^4.6.2"
+  }
+}

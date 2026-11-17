@@ -1,0 +1,33 @@
+@use '../../../theme';
+
+.game {
+  display: flex;
+  justify-content: space-evenly;
+  flex-wrap: wrap;
+  gap: 2rem;
+  width: 100%;
+}
+
+.board {
+  width: 50vw;
+  height: 50vw;
+  max-width: 650px;
+  max-height: 650px;
+  position: relative;
+  min-width: 335px;
+  min-height: 335px;
+
+  @media screen and (max-width: 400px) {
+    min-width: 90vw;
+    min-height: 90vw;
+  }
+
+   > svg {
+    position: absolute;
+    margin: 2rem;
+    * {
+      stroke: theme.$colorSecondary;
+      stroke-width: .5rem;
+    }
+  }
+}

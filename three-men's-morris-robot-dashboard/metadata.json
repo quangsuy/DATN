@@ -1,0 +1,6 @@
+{
+  "name": "Three Men's Morris Robot Dashboard",
+  "description": "Giao diện Web Dashboard điều khiển và giám sát hệ thống cờ người tự hành Three Men's Morris tích hợp ESP32-S3, AI Minimax và thuật toán A*.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
