@@ -14,6 +14,9 @@ void espnow_robot_init(void);
 // Returns true if esp_now_send() was accepted (not confirmed delivered).
 bool espnow_send_waypoint(const RobotCmdPacket *pkt, uint8_t robot_id);
 
+// Send LED colour command (ROBOT_CMD_SET_LED) to one robot.
+bool espnow_send_led(const RobotLedPacket *pkt, uint8_t robot_id);
+
 // Broadcast emergency-stop to ALL robots simultaneously.
 void espnow_broadcast_stop(void);
 

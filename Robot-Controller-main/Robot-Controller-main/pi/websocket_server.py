@@ -18,8 +18,9 @@ log = logging.getLogger(__name__)
 
 
 class MorrisWebSocketServer:
-    def __init__(self, backend: Optional[MorrisBackend] = None) -> None:
+    def __init__(self, backend: Optional[MorrisBackend] = None, camera: Any = None) -> None:
         self.backend = backend or MorrisBackend()
+        self.camera = camera
         self.clients: Set[asyncio.Queue[Dict[str, Any]]] = set()
         self.backend.subscribe(self._publish)
 
@@ -59,6 +60,9 @@ class MorrisWebSocketServer:
             self.backend.emergency_stop()
             return
         if action_type == "calibrate_camera":
+            if self.camera is not None:
+                self.camera.start_calibration()
+                self.backend.camera_online = bool(self.camera.online)
             self.backend._emit("camera_state", status="calibrating")
             return
         if action_type == "ping":
@@ -153,6 +157,9 @@ def parse_args() -> argparse.Namespace:
         default="simulation",
         help="robot transport (default: simulation; no hardware required)",
     )
+    parser.add_argument("--camera", action="store_true", help="bật MJPEG camera service (cổng --camera-port)")
+    parser.add_argument("--camera-port", type=int, default=8080)
+    parser.add_argument("--camera-device", type=int, default=None, help="chỉ số /dev/videoN (mặc định tự dò)")
     parser.add_argument("--serial-device", default="/dev/ttyUSB0", help="serial device for --transport serial")
     return parser.parse_args()
 
@@ -164,8 +171,21 @@ def main() -> None:
     )
     args = parse_args()
     backend = build_backend(args.transport, args.serial_device)
+    camera = None
+    if args.camera:
+        import threading
+
+        from .camera_service import CameraService, serve as serve_camera
+
+        camera = CameraService(device_index=args.camera_device)
+        if not camera.calibrated:
+            camera.start_calibration()
+        camera.start()
+        http_server = serve_camera(camera, args.host, args.camera_port)
+        threading.Thread(target=http_server.serve_forever, name="camera-http", daemon=True).start()
+        log.info("Camera MJPEG tại http://%s:%d/video", args.host, args.camera_port)
     log.info("Starting %s transport on ws://%s:%d", args.transport, args.host, args.port)
-    asyncio.run(MorrisWebSocketServer(backend).serve(args.host, args.port))
+    asyncio.run(MorrisWebSocketServer(backend, camera).serve(args.host, args.port))
 
 
 if __name__ == "__main__":

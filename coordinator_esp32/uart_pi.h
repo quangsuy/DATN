@@ -29,6 +29,9 @@ bool uart_pi_parse(const char *buf, uint16_t len, PiCommand *out_cmd);
 // Enqueue a pre-formatted PiResponse for transmission by uart_tx_task.
 bool uart_pi_enqueue_response(const PiResponse *resp);
 
+// Low-level write of one pre-formatted response to UART2 (called by task_uart_tx).
+void uart_pi_write_response(const PiResponse *resp);
+
 // Build and enqueue an ACK response for a given sequence number.
 void uart_pi_send_ack(uint16_t seq, const char *status_str);
 

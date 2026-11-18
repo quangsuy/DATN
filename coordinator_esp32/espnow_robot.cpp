@@ -11,24 +11,33 @@
 extern QueueHandle_t xRobotRxQueue;
 
 // ─── ESP-NOW receive callback (runs in WiFi task context) ─────
-static void on_espnow_recv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
+static void handle_rx(const uint8_t *data, int data_len) {
     if (data_len != sizeof(RobotStatusPacket)) return; // ignore malformed frames
     RobotStatusPacket pkt;
     memcpy(&pkt, data, sizeof(pkt));
-    // Validate robot_id before forwarding
     if (pkt.robot_id < 1 || pkt.robot_id > MAX_ROBOTS) return;
-    // Push to queue from ISR-like context; use FromISR variant for safety
-    BaseType_t woken = pdFALSE;
-    xQueueSendFromISR(xRobotRxQueue, &pkt, &woken);
-    if (woken) portYIELD_FROM_ISR();
+    // Callback chay trong WiFi task (khong phai ISR) -> dung xQueueSend khong block
+    xQueueSend(xRobotRxQueue, &pkt, 0);
 }
 
-// ─── ESP-NOW send callback (optional, for TX diagnostics) ─────
-static void on_espnow_sent(const uint8_t *mac_addr, esp_now_send_status_t status) {
-    // Could log TX failures here; for MVP we rely on the ACK timeout on Pi side
-    (void)mac_addr;
-    (void)status;
+// Chu ky callback khac nhau giua ESP32 Arduino core 2.x va 3.x
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
+static void on_espnow_recv(const esp_now_recv_info_t *info, const uint8_t *data, int data_len) {
+    (void)info;
+    handle_rx(data, data_len);
 }
+static void on_espnow_sent(const wifi_tx_info_t *info, esp_now_send_status_t status) {
+    (void)info; (void)status;   // MVP: dua vao ACK timeout phia Pi
+}
+#else
+static void on_espnow_recv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
+    (void)mac_addr;
+    handle_rx(data, data_len);
+}
+static void on_espnow_sent(const uint8_t *mac_addr, esp_now_send_status_t status) {
+    (void)mac_addr; (void)status;
+}
+#endif
 
 // ─── Init ──────────────────────────────────────────────────────
 void espnow_robot_init(void) {
@@ -64,6 +73,12 @@ bool espnow_send_waypoint(const RobotCmdPacket *pkt, uint8_t robot_id) {
     const uint8_t *mac = ROBOT_MACS[robot_id - 1];
     esp_err_t ret = esp_now_send(mac, (const uint8_t*)pkt, sizeof(RobotCmdPacket));
     return ret == ESP_OK;
+}
+
+// ─── Send LED colour to one robot ─────────────────────────────
+bool espnow_send_led(const RobotLedPacket *pkt, uint8_t robot_id) {
+    if (robot_id < 1 || robot_id > MAX_ROBOTS) return false;
+    return esp_now_send(ROBOT_MACS[robot_id - 1], (const uint8_t*)pkt, sizeof(RobotLedPacket)) == ESP_OK;
 }
 
 // ─── Emergency stop broadcast ─────────────────────────────────

@@ -7,7 +7,7 @@ from time import monotonic
 from typing import Any, Optional
 
 from .board_planner import MotionPath
-from .coordinator_protocol import ProtocolError, decode_message, encode_message, waypoint_message
+from .coordinator_protocol import ProtocolError, decode_message, encode_message, led_color_message, waypoint_message
 
 
 @dataclass
@@ -64,6 +64,16 @@ class SerialCoordinatorTransport:
             if not self._wait_for_ack(sequence):
                 return {"status": "timeout", "sequence": sequence, "waypoint_index": index}
         return {"status": "completed"}
+
+    def set_led(self, robot_id: int, r: int, g: int, b: int, brightness: int = 200) -> bool:
+        """Dat mau 5 LED tren xe: Pi -> Coordinator (set_led) -> ESP-NOW ROBOT_CMD_SET_LED."""
+        sequence = self._next_sequence()
+        packet = led_color_message(sequence, robot_id, r, g, b, brightness)
+        try:
+            self.serial_port.write(packet)
+        except Exception:
+            return False
+        return self._wait_for_ack(sequence)
 
     def emergency_stop(self) -> None:
         sequence = self._next_sequence()

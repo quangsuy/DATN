@@ -34,22 +34,21 @@ typedef struct __attribute__((packed)) {
     int16_t  y_mm;          // target Y (mm)
     int16_t  heading_mrad;  // target heading (milli-radians)
     uint8_t  speed;         // PWM speed 0-255
-    uint8_t  reserved[5];   // padding / future use
+    uint8_t  reserved[6];   // padding -> tong 18 byte (1+1+1+1+1+2+2+2+1+6)
 } RobotCmdPacket;           // sizeof = 18
 
-// ----- Coordinator -> Robot LED color packet (8 bytes) --------
-// Dùng cmd_type = ROBOT_CMD_SET_LED (0x04).
-// Robot nhận packet này sẽ đặt màu cho cả 5 LED NeoPixel/WS2812B
-// trên thân xe theo giá trị r, g, b với brightness chung.
+// ----- Coordinator -> Robot LED color packet (18 bytes) -------
+// cmd_type = ROBOT_CMD_SET_LED (0x04). Robot dat mau cho 5 LED RGB tren than xe.
+// Giu 18 byte de moi goi Coordinator->Robot cung kich thuoc; robot doc byte dau (cmd_type) de phan loai.
 typedef struct __attribute__((packed)) {
     uint8_t  cmd_type;      // ROBOT_CMD_SET_LED = 0x04
     uint8_t  robot_id;      // 1-6
-    uint8_t  r;             // Red channel   0-255
-    uint8_t  g;             // Green channel 0-255
-    uint8_t  b;             // Blue channel  0-255
-    uint8_t  brightness;    // Global brightness 0-255 (255 = tối đa)
-    uint8_t  reserved[2];   // Dự phòng để cân bằng alignment
-} RobotLedPacket;           // sizeof = 8
+    uint8_t  r;             // Red   0-255
+    uint8_t  g;             // Green 0-255
+    uint8_t  b;             // Blue  0-255
+    uint8_t  brightness;    // Do sang chung 0-255
+    uint8_t  reserved[12];  // padding -> tong 18 byte
+} RobotLedPacket;           // sizeof = 18
 
 // ----- Robot -> Coordinator status packet (8 bytes) -----------
 typedef struct __attribute__((packed)) {
@@ -63,6 +62,6 @@ typedef struct __attribute__((packed)) {
     uint8_t  reserved;
 } RobotStatusPacket;        // sizeof = 8
 
-_Static_assert(sizeof(RobotCmdPacket)    == 18, "RobotCmdPacket size mismatch");
-_Static_assert(sizeof(RobotLedPacket)    == 8,  "RobotLedPacket size mismatch");
-_Static_assert(sizeof(RobotStatusPacket) == 8,  "RobotStatusPacket size mismatch");
+static_assert(sizeof(RobotCmdPacket)    == 18, "RobotCmdPacket size mismatch");
+static_assert(sizeof(RobotLedPacket)    == 18, "RobotLedPacket size mismatch");
+static_assert(sizeof(RobotStatusPacket) == 8,  "RobotStatusPacket size mismatch");

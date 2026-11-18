@@ -102,6 +102,27 @@ static void handle_emergency_stop(const EmergencyStopCmd *es) {
     uart_pi_send_fault("emergency_stop executed", -1);
 }
 
+// ─── Handle LED colour command ───────────────────────────────
+static void handle_set_led(const LedCmd *lc) {
+    RobotLedPacket pkt = {};
+    pkt.cmd_type   = ROBOT_CMD_SET_LED;
+    pkt.robot_id   = lc->robot_id;
+    pkt.r          = lc->r;
+    pkt.g          = lc->g;
+    pkt.b          = lc->b;
+    pkt.brightness = lc->brightness;
+    bool sent = espnow_send_led(&pkt, lc->robot_id);
+    Serial.printf("[CMD] LED robot=%d rgb=(%d,%d,%d) br=%d %s\n", lc->robot_id,
+                  lc->r, lc->g, lc->b, lc->brightness, sent ? "ok" : "FAILED");
+    if (sent) {
+        uart_pi_send_ack(lc->seq, ACK_COMPLETED);   // khong cho robot phan hoi
+    } else {
+        char msg[64];
+        snprintf(msg, sizeof(msg), "espnow_led failed for robot %d", lc->robot_id);
+        uart_pi_send_fault(msg, lc->robot_id);
+    }
+}
+
 // ─── Public dispatcher ────────────────────────────────────────
 void cmd_handle(const PiCommand *cmd) {
     switch (cmd->type) {
@@ -110,6 +131,9 @@ void cmd_handle(const PiCommand *cmd) {
             break;
         case CMD_EMERGENCY_STOP:
             handle_emergency_stop(&cmd->estop);
+            break;
+        case CMD_SET_LED:
+            handle_set_led(&cmd->led);
             break;
         case CMD_UNKNOWN:
         default:

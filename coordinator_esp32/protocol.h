@@ -47,10 +47,19 @@ typedef struct {
     char     scope[16];     // "all" or "robot_N"
 } EmergencyStopCmd;
 
+// ----- Parsed LED command (Pi -> Coordinator) ----------------
+typedef struct {
+    uint16_t seq;
+    uint8_t  robot_id;      // 1-6
+    uint8_t  r, g, b;
+    uint8_t  brightness;
+} LedCmd;
+
 // ----- Generic incoming command union ------------------------
 typedef enum : uint8_t {
     CMD_WAYPOINT = 0,
     CMD_EMERGENCY_STOP,
+    CMD_SET_LED,
     CMD_UNKNOWN
 } CmdType;
 
@@ -59,6 +68,7 @@ typedef struct {
     union {
         WaypointCmd      waypoint;
         EmergencyStopCmd estop;
+        LedCmd           led;
     };
 } PiCommand;
 

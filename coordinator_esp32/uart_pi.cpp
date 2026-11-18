@@ -91,6 +91,25 @@ bool uart_pi_parse(const char *buf, uint16_t len, PiCommand *out_cmd) {
         return true;
     }
 
+    // --- set_led ---
+    if (strcmp(msg_type, MSG_SET_LED) == 0) {
+        out_cmd->type = CMD_SET_LED;
+        LedCmd &lc    = out_cmd->led;
+        lc.seq        = seq;
+        int rid       = payload["robot_id"] | 0;
+        int r         = payload["r"] | -1;
+        int g         = payload["g"] | -1;
+        int b         = payload["b"] | -1;
+        int br        = payload["brightness"] | 200;
+        if (rid < 1 || rid > 6) return false;
+        if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) return false;
+        if (br < 0 || br > 255) return false;
+        lc.robot_id = (uint8_t)rid;
+        lc.r = (uint8_t)r; lc.g = (uint8_t)g; lc.b = (uint8_t)b;
+        lc.brightness = (uint8_t)br;
+        return true;
+    }
+
     out_cmd->type = CMD_UNKNOWN;
     return false;
 }
