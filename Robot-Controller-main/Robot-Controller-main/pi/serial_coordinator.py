@@ -13,7 +13,7 @@ from .coordinator_protocol import ProtocolError, decode_message, encode_message,
 @dataclass
 class SerialCoordinatorTransport:
     serial_port: Any
-    ack_timeout_s: float = 1.0
+    ack_timeout_s: float = 20.0
     speed: int = 120
     sequence: int = 0
 

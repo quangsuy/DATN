@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <esp_now.h>
+#include <esp_wifi.h>
 #include <string.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
@@ -44,6 +45,11 @@ void espnow_robot_init(void) {
     // WiFi must be STA mode for ESP-NOW to work on the standard channel
     WiFi.mode(WIFI_STA);
     WiFi.disconnect();
+    // Khoa cung kenh ESP-NOW (khong ket noi router) de khop voi 6 xe
+    esp_wifi_set_promiscuous(true);
+    esp_wifi_set_channel(ESPNOW_CHANNEL, WIFI_SECOND_CHAN_NONE);
+    esp_wifi_set_promiscuous(false);
+    Serial.printf("[ESPNOW] Coordinator MAC: %s, channel %d\n", WiFi.macAddress().c_str(), ESPNOW_CHANNEL);
 
     if (esp_now_init() != ESP_OK) {
         Serial.println("[ESPNOW] Init FAILED");
@@ -53,9 +59,9 @@ void espnow_robot_init(void) {
     esp_now_register_recv_cb(on_espnow_recv);
     esp_now_register_send_cb(on_espnow_sent);
 
-    // Register each robot as a peer (broadcast channel = 0, no encryption)
+    // Register each robot as a peer (kenh co dinh, khong ma hoa)
     esp_now_peer_info_t peer = {};
-    peer.channel   = 0;       // 0 = auto-detect current channel
+    peer.channel   = ESPNOW_CHANNEL;  // phai trung kenh da khoa o tren
     peer.encrypt   = false;
     for (int i = 0; i < MAX_ROBOTS; i++) {
         memcpy(peer.peer_addr, ROBOT_MACS[i], 6);

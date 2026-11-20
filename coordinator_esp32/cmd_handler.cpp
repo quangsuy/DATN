@@ -13,7 +13,7 @@
 extern EventGroupHandle_t xRobotAckEvent;
 
 // Timeout waiting for robot to reach a waypoint (ms)
-#define ROBOT_ACK_TIMEOUT_MS  3000
+#define ROBOT_ACK_TIMEOUT_MS  15000
 
 // ─── Handle waypoint command ──────────────────────────────────
 static void handle_waypoint(const WaypointCmd *wp) {
