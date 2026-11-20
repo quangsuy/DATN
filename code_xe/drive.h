@@ -10,6 +10,7 @@ typedef struct {
 } Pose;
 
 extern Pose g_pose;
+extern float g_path_mm;   // quang duong tien tich luy (mm, co dau) - dung do be rong vach
 
 void drive_init(void);
 // left/right: -255..255 (am = lui). Ap dung dao chieu theo config.

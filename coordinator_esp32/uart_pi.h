@@ -8,10 +8,15 @@
 #include <stdbool.h>
 #include "protocol.h"
 
-// Hardware assignment for 38-pin ESP32 DevKit
+// Chan UART toi Pi (qua USB-TTL).
+// ESP32-CAM: GPIO16/17 la chan PSRAM -> KHONG dung. Dung GPIO13 (RX) / GPIO14 (TX): khong phai
+// chan strapping, khong dung boi camera/PSRAM. Dau day: TX cua USB-TTL -> GPIO13, RX -> GPIO14, GND chung.
+// DevKit 38 chan thuong: co the dung 16/17 (bo comment ben duoi).
 #define UART_PI_PORT    2       // HardwareSerial port number
-#define UART_PI_RX_PIN  16
-#define UART_PI_TX_PIN  17
+#define UART_PI_RX_PIN  13
+#define UART_PI_TX_PIN  14
+// #define UART_PI_RX_PIN  16
+// #define UART_PI_TX_PIN  17
 #define UART_PI_BAUD    115200
 
 // Initialise UART2

@@ -5,6 +5,7 @@
 #include <math.h>
 
 Pose g_pose = {0, 0, 0};
+float g_path_mm = 0.0f;
 
 // ---------- PWM (khac nhau giua core 2.x va 3.x) ----------
 #if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
@@ -135,6 +136,7 @@ void drive_update(void) {
         }
     }
 #endif
+    g_path_mm += ds;
     float mid = g_pose.theta + 0.5f * dth;
     g_pose.x_mm += ds * cosf(mid);
     g_pose.y_mm += ds * sinf(mid);

@@ -29,6 +29,7 @@
 #include <freertos/task.h>
 #include <freertos/queue.h>
 #include <freertos/event_groups.h>
+#include <esp_system.h>
 
 #include "protocol.h"
 #include "espnow_protocol.h"
@@ -44,17 +45,19 @@ QueueHandle_t     xRobotRxQueue;   // RobotStatusPacket
 EventGroupHandle_t xRobotAckEvent; // bits 0-5 = robots 1-6
 
 // ─── Pin defines ─────────────────────────────────────────────
-#define PIN_LED   2
+#define PIN_LED   33          // LED do tren ESP32-CAM (active LOW); tranh GPIO2 (chan SD/strapping)
 
 // ─── Heartbeat interval ──────────────────────────────────────
 #define HEARTBEAT_INTERVAL_MS 5000
 
-// ─── Task stacks (words, not bytes) ──────────────────────────
-#define STACK_UART_RX     4096
-#define STACK_UART_TX     2048
-#define STACK_CMD_HANDLER 6144
-#define STACK_ROBOT_STATUS 3072
-#define STACK_HEARTBEAT   2048
+// ─── Task stacks: Arduino-ESP32 tinh theo BYTE ──────────────
+// Moi lan gui JSON dung StaticJsonDocument<512> + PiResponse(514B) tren stack + printf
+// -> can du rong, stack nho se bi "Stack canary watchpoint triggered" va reboot.
+#define STACK_UART_RX      6144
+#define STACK_UART_TX      3072
+#define STACK_CMD_HANDLER  8192
+#define STACK_ROBOT_STATUS 6144
+#define STACK_HEARTBEAT    4096
 
 // =============================================================
 // Task: uart_rx_task
@@ -190,6 +193,10 @@ static void task_heartbeat(void *param) {
 // =============================================================
 void setup() {
     Serial.begin(115200);
+    delay(300);
+    // Chan doan: ly do reset (3=SW, 4=panic, 5=int WDT, 6=task WDT, 15=brownout) va PSRAM
+    Serial.printf("\n[BOOT] reset_reason=%d psram=%d free_heap=%u\n", (int)esp_reset_reason(),
+                  (int)psramFound(), (unsigned)ESP.getFreeHeap());
     pinMode(PIN_LED, OUTPUT);
     digitalWrite(PIN_LED, HIGH);
 

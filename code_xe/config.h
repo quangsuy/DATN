@@ -67,3 +67,35 @@ static const uint8_t COORDINATOR_MAC[6] = {0x38, 0x18, 0x2B, 0xB1, 0xBC, 0xE4};
 // ----- Khac -----------------------------------------------------
 #define HEARTBEAT_MS       3000
 #define CMD_QUEUE_LEN      8
+
+// ----- 5 cam bien do vach TCRT5000L (theo schematic + PCB) -------
+#define PIN_SENSOR_1   36      // SENSOR_VP (ngoai cung)
+#define PIN_SENSOR_2   39      // SENSOR_VN
+#define PIN_SENSOR_3   34      // giua
+#define PIN_SENSOR_4   35
+#define PIN_SENSOR_5   32      // ngoai cung doi dien (tat ca la ADC1, chay duoc cung WiFi)
+
+#define SENSOR_PITCH_MM    17.78f  // PCB: 700 mil giua 2 cam bien lien tiep
+#define SENSOR1_IS_RIGHT   1       // cam bien 1 o BEN PHAI xe (nhin tu tren xuong, dau xe ve phia cam bien). Doi neu nguoc
+#define SENSOR_FORWARD_MM  40.0f   // khoang cach tu TRUC BANH toi mang cam bien (uoc luong tu PCB: DO LAI bang thuoc!)
+#define LINE_IS_DARK       1       // 1 = vach TOI tren nen SANG; 0 = vach SANG tren nen toi
+#define SENSOR_MIN_CONTRAST 300    // chenh lech ADC toi thieu giua vach va nen de tin cay
+#define SENSOR_ADAPT_RATE  0.0002f // toc do tu thich nghi min/max (moi vong ~200Hz)
+#define SENSOR_FIXED_CAL   0       // 1 = dung nguong co dinh ben duoi thay vi tu thich nghi
+#define SENSOR_FIXED_LO    500
+#define SENSOR_FIXED_HI    2800
+#define SENSOR_DEBUG       0       // 1 = in gia tri cam bien ra Serial (de hieu chinh)
+
+// ----- Hieu chinh vi tri bang vach -------------------------------
+#define BOARD_NODE_SPACING_MM 100.0f  // khop DEFAULT_BOARD_NODES_MM trong pi/backend.py
+#define LINE_NODE_RADIUS_MM   30.0f   // diem xuat phat phai nam trong ban kinh nay cua mot nut moi coi la "tren vach"
+#define SNAP_RADIUS_MM        35.0f   // giao diem chi duoc chap nhan neu gan nut <= gia tri nay
+#define SNAP_MAX_MM           40.0f   // gioi han dich toi da moi lan snap
+#define SNAP_GAIN             0.8f
+#define CROSS_MIN_SENSORS     3       // so cam bien toi thieu cung thay vach = giao diem (bien ban co chi co vach 1 phia -> ~3/5)
+#define CROSS_MAX_LEN_MM      45.0f   // be rong vach toi da (loai su kien dai bat thuong)
+#define LINE_POS_BLEND        0.03f   // keo vi tri ngang ve vach moi chu ky
+#define LINE_HEADING_GAIN     0.0001f // rad / mm sai lech ngang moi chu ky
+#define LINE_DEADBAND_MM      4.0f    // bo qua sai lech nho hon (do phan giai mang cam bien ~ pitch)
+#define LINE_MAX_CORR_MM      3.0f    // gioi han buoc chinh moi chu ky
+#define LINE_NODE_GUARD_MM    24.0f   // khong giu vach khi tam mang cach nut < gia tri nay

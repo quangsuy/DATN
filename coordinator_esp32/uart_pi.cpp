@@ -14,8 +14,8 @@ static HardwareSerial PiSerial(UART_PI_PORT);
 
 // ─── Init ──────────────────────────────────────────────────────
 void uart_pi_init(void) {
+    PiSerial.setRxBufferSize(PROTO_MAX_BYTES * 4);   // phai goi TRUOC begin() tren core 3.x
     PiSerial.begin(UART_PI_BAUD, SERIAL_8N1, UART_PI_RX_PIN, UART_PI_TX_PIN);
-    PiSerial.setRxBufferSize(PROTO_MAX_BYTES * 4);
 }
 
 // ─── Read one JSON-Lines line ──────────────────────────────────

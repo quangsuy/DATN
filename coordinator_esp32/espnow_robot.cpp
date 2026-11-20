@@ -4,6 +4,7 @@
 #include <WiFi.h>
 #include <esp_now.h>
 #include <esp_wifi.h>
+#include <esp_mac.h>
 #include <string.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
@@ -49,7 +50,11 @@ void espnow_robot_init(void) {
     esp_wifi_set_promiscuous(true);
     esp_wifi_set_channel(ESPNOW_CHANNEL, WIFI_SECOND_CHAN_NONE);
     esp_wifi_set_promiscuous(false);
-    Serial.printf("[ESPNOW] Coordinator MAC: %s, channel %d\n", WiFi.macAddress().c_str(), ESPNOW_CHANNEL);
+    uint8_t self_mac[6] = {0};
+    esp_read_mac(self_mac, ESP_MAC_WIFI_STA);
+    Serial.printf("[ESPNOW] Coordinator MAC: %02X:%02X:%02X:%02X:%02X:%02X, channel %d\n",
+                  self_mac[0], self_mac[1], self_mac[2], self_mac[3], self_mac[4], self_mac[5],
+                  ESPNOW_CHANNEL);
 
     if (esp_now_init() != ESP_OK) {
         Serial.println("[ESPNOW] Init FAILED");
