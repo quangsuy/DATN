@@ -55,13 +55,13 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   // 6 Autonomous Vehicles state
   const [robots, setRobots] = useState<RobotInfo[]>([
     // Team 1 (Player 1)
-    { id: 1, team: 1, name: 'Rover-01', status: 'idle', currentNode: null, targetNode: null, signalDbm: -42, macAddress: '24:DC:C3:01', speedPwm: 180, firmwareVersion: 'v2.1' },
-    { id: 2, team: 1, name: 'Rover-02', status: 'idle', currentNode: null, targetNode: null, signalDbm: -45, macAddress: '24:DC:C3:02', speedPwm: 180, firmwareVersion: 'v2.1' },
-    { id: 3, team: 1, name: 'Rover-03', status: 'idle', currentNode: null, targetNode: null, signalDbm: -39, macAddress: '24:DC:C3:03', speedPwm: 180, firmwareVersion: 'v2.1' },
+    { id: 1, team: 1, name: 'Rover-01', status: 'idle', currentNode: null, targetNode: null, signalDbm: -42, macAddress: '70:4B:CA:6D:8F:AC', speedPwm: 180, firmwareVersion: 'v2.4' },
+    { id: 2, team: 1, name: 'Rover-02', status: 'idle', currentNode: null, targetNode: null, signalDbm: -45, macAddress: 'A8:42:E3:4A:29:AC', speedPwm: 180, firmwareVersion: 'v2.4' },
+    { id: 3, team: 1, name: 'Rover-03', status: 'idle', currentNode: null, targetNode: null, signalDbm: -39, macAddress: 'CC:DB:A7:2D:D6:4C', speedPwm: 180, firmwareVersion: 'v2.4' },
     // Team 2 (Player 2 or AI)
-    { id: 4, team: 2, name: 'Rover-04', status: 'idle', currentNode: null, targetNode: null, signalDbm: -41, macAddress: '24:DC:C3:04', speedPwm: 180, firmwareVersion: 'v2.1' },
-    { id: 5, team: 2, name: 'Rover-05', status: 'idle', currentNode: null, targetNode: null, signalDbm: -44, macAddress: '24:DC:C3:05', speedPwm: 180, firmwareVersion: 'v2.1' },
-    { id: 6, team: 2, name: 'Rover-06', status: 'idle', currentNode: null, targetNode: null, signalDbm: -40, macAddress: '24:DC:C3:06', speedPwm: 180, firmwareVersion: 'v2.1' },
+    { id: 4, team: 2, name: 'Rover-04', status: 'idle', currentNode: null, targetNode: null, signalDbm: -41, macAddress: 'F0:08:D1:7C:13:D8', speedPwm: 180, firmwareVersion: 'v2.4' },
+    { id: 5, team: 2, name: 'Rover-05', status: 'idle', currentNode: null, targetNode: null, signalDbm: -44, macAddress: '04:83:08:59:43:6C', speedPwm: 180, firmwareVersion: 'v2.4' },
+    { id: 6, team: 2, name: 'Rover-06', status: 'idle', currentNode: null, targetNode: null, signalDbm: -40, macAddress: 'B0:3F:D3:5B:44:60', speedPwm: 180, firmwareVersion: 'v2.4' },
   ]);
 
   // UI Selection & Movement Animation states
@@ -89,23 +89,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
   // The backend is authoritative. The browser only animates confirmed events.
   useEffect(() => {
-    wsService.connect();
-    wsService.send({ type: 'join_game', mode: gameMode, player_team: humanTeam, first_player: firstPlayer });
-
-    // Gửi màu LED cho cả 2 đội ngay khi bắt đầu game
-    const hexToRgb = (hex: string) => {
-      const h = hex.replace('#', '');
-      return {
-        r: parseInt(h.substring(0, 2), 16),
-        g: parseInt(h.substring(2, 4), 16),
-        b: parseInt(h.substring(4, 6), 16),
-      };
-    };
-    const c1 = hexToRgb(teamColors.team1);
-    const c2 = hexToRgb(teamColors.team2);
-    wsService.send({ type: 'set_team_color', team: 1, ...c1, brightness: 200 });
-    wsService.send({ type: 'set_team_color', team: 2, ...c2, brightness: 200 });
-
     const unsubscribe = wsService.subscribe((event) => {
       if (event.type === 'game_state') {
         setBoard(event.board);
@@ -316,6 +299,25 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       }
     });
 
+    if (!wsService.isSimulated) {
+      wsService.connect();
+    }
+    wsService.send({ type: 'join_game', mode: gameMode, player_team: humanTeam, first_player: firstPlayer });
+
+    // Gửi màu LED cho cả 2 đội ngay khi bắt đầu game
+    const hexToRgb = (hex: string) => {
+      const h = hex.replace('#', '');
+      return {
+        r: parseInt(h.substring(0, 2), 16),
+        g: parseInt(h.substring(2, 4), 16),
+        b: parseInt(h.substring(4, 6), 16),
+      };
+    };
+    const c1 = hexToRgb(teamColors.team1);
+    const c2 = hexToRgb(teamColors.team2);
+    wsService.send({ type: 'set_team_color', team: 1, ...c1, brightness: 200 });
+    wsService.send({ type: 'set_team_color', team: 2, ...c2, brightness: 200 });
+
     return () => {
       unsubscribe();
       wsService.disconnect();
@@ -378,7 +380,37 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   // Handle clicking on a Board Node
   const handleNodeClick = (nodeId: number) => {
     if (activeMoveStep !== null || isAiThinking || winner !== null) return;
-    if (selectedRobotId === null) return;
+    if (gameMode === 'pva' && currentPlayer !== humanTeam) return;
+
+    // Nếu người chơi click vào một ô đang có xe của chính đội mình -> chọn xe đó
+    const robotAtClickedNode = robots.find((r) => r.currentNode === nodeId);
+    if (robotAtClickedNode && robotAtClickedNode.team === currentPlayer && !isDropPhase) {
+      handleRobotClick(robotAtClickedNode.id);
+      return;
+    }
+
+    // Nếu đang ở giai đoạn Đặt quân (Drop phase) mà người chơi ấn thẳng vào ô trống
+    // trên bàn cờ (chưa ấn chọn xe ở bãi đỗ) -> tự động lấy xe đầu tiên còn trong bãi đỗ của đội đó!
+    if (selectedRobotId === null) {
+      if (isDropPhase && board[nodeId] === null) {
+        const autoBayRobot = robots.find((r) => r.team === currentPlayer && r.currentNode === null);
+        if (!autoBayRobot) {
+          sound.playError();
+          return;
+        }
+        sound.playSelect();
+        setSelectedRobotId(autoBayRobot.id);
+        wsService.send({
+          type: 'select_move',
+          player: currentPlayer,
+          robot_id: autoBayRobot.id,
+          from_node: null,
+          to_node: nodeId,
+        });
+        setPipelineStatus(`ĐÃ GỬI YÊU CẦU XE #${autoBayRobot.id} -> Ô #${nodeId}`);
+      }
+      return;
+    }
 
     // Must be a valid destination
     if (!validDestinations.includes(nodeId)) {

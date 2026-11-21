@@ -32,12 +32,12 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onBack, onPlay
 
   // Sample 6 robots telemetry state
   const [robots] = useState<RobotInfo[]>([
-    { id: 1, team: 1, name: 'Rover-01', status: 'idle', currentNode: 0, targetNode: null, signalDbm: -42, macAddress: '24:DC:C3:01', speedPwm: 180, firmwareVersion: 'v2.1' },
-    { id: 2, team: 1, name: 'Rover-02', status: 'idle', currentNode: 1, targetNode: null, signalDbm: -45, macAddress: '24:DC:C3:02', speedPwm: 180, firmwareVersion: 'v2.1' },
-    { id: 3, team: 1, name: 'Rover-03', status: 'idle', currentNode: 3, targetNode: null, signalDbm: -39, macAddress: '24:DC:C3:03', speedPwm: 180, firmwareVersion: 'v2.1' },
-    { id: 4, team: 2, name: 'Rover-04', status: 'idle', currentNode: 4, targetNode: null, signalDbm: -41, macAddress: '24:DC:C3:04', speedPwm: 180, firmwareVersion: 'v2.1' },
-    { id: 5, team: 2, name: 'Rover-05', status: 'idle', currentNode: 5, targetNode: null, signalDbm: -44, macAddress: '24:DC:C3:05', speedPwm: 180, firmwareVersion: 'v2.1' },
-    { id: 6, team: 2, name: 'Rover-06', status: 'idle', currentNode: 8, targetNode: null, signalDbm: -40, macAddress: '24:DC:C3:06', speedPwm: 180, firmwareVersion: 'v2.1' },
+    { id: 1, team: 1, name: 'Rover-01', status: 'idle', currentNode: 0, targetNode: null, signalDbm: -42, macAddress: '70:4B:CA:6D:8F:AC', speedPwm: 180, firmwareVersion: 'v2.4' },
+    { id: 2, team: 1, name: 'Rover-02', status: 'idle', currentNode: 1, targetNode: null, signalDbm: -45, macAddress: 'A8:42:E3:4A:29:AC', speedPwm: 180, firmwareVersion: 'v2.4' },
+    { id: 3, team: 1, name: 'Rover-03', status: 'idle', currentNode: 3, targetNode: null, signalDbm: -39, macAddress: 'CC:DB:A7:2D:D6:4C', speedPwm: 180, firmwareVersion: 'v2.4' },
+    { id: 4, team: 2, name: 'Rover-04', status: 'idle', currentNode: 4, targetNode: null, signalDbm: -41, macAddress: 'F0:08:D1:7C:13:D8', speedPwm: 180, firmwareVersion: 'v2.4' },
+    { id: 5, team: 2, name: 'Rover-05', status: 'idle', currentNode: 5, targetNode: null, signalDbm: -44, macAddress: '04:83:08:59:43:6C', speedPwm: 180, firmwareVersion: 'v2.4' },
+    { id: 6, team: 2, name: 'Rover-06', status: 'idle', currentNode: 8, targetNode: null, signalDbm: -40, macAddress: 'B0:3F:D3:5B:44:60', speedPwm: 180, firmwareVersion: 'v2.4' },
   ]);
 
   // Sync telemetry updates

@@ -147,3 +147,11 @@ def hex_to_rgb(hex_color: str) -> tuple:
         raise ProtocolError(f"hex_color phải có dạng #RRGGBB, nhận được: {hex_color!r}")
     return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
 
+
+def ping_message(sequence: int, robot_id: int) -> bytes:
+    """Build a JSON Lines packet to ping a specific robot (1-6) via ESP-NOW."""
+    if not 1 <= robot_id <= 6:
+        raise ProtocolError("robot_id must be between 1 and 6")
+    return encode_message(sequence, "ping", {"robot_id": robot_id})
+
+

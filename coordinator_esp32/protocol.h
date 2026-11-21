@@ -17,6 +17,7 @@
 #define MSG_WAYPOINT       "waypoint"
 #define MSG_EMERGENCY_STOP "emergency_stop"
 #define MSG_SET_LED        "set_led"   // Payload: {robot_id, r, g, b, brightness}
+#define MSG_PING           "ping"      // Payload: {robot_id} (1-6)
 
 // Coordinator -> Pi message types
 #define MSG_ACK            "ack"
@@ -55,11 +56,18 @@ typedef struct {
     uint8_t  brightness;
 } LedCmd;
 
+// ----- Parsed PING command (Pi -> Coordinator) ---------------
+typedef struct {
+    uint16_t seq;
+    uint8_t  robot_id;      // 1-6
+} PingCmd;
+
 // ----- Generic incoming command union ------------------------
 typedef enum : uint8_t {
     CMD_WAYPOINT = 0,
     CMD_EMERGENCY_STOP,
     CMD_SET_LED,
+    CMD_PING,
     CMD_UNKNOWN
 } CmdType;
 
@@ -69,6 +77,7 @@ typedef struct {
         WaypointCmd      waypoint;
         EmergencyStopCmd estop;
         LedCmd           led;
+        PingCmd          ping;
     };
 } PiCommand;
 

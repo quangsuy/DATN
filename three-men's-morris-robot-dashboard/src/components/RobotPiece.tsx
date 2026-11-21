@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { RobotInfo } from '../types';
 
 interface RobotPieceProps {
@@ -52,7 +52,12 @@ export const RobotPiece: React.FC<RobotPieceProps> = ({
   return (
     <div
       id={`robot-piece-${robot.id}`}
-      onClick={onClick}
+      onClick={(e) => {
+        if (onClick) {
+          e.stopPropagation();
+          onClick();
+        }
+      }}
       className={`relative cursor-pointer transition-transform duration-200 select-none flex items-center justify-center ${sizeClasses} ${
         isSelected ? 'scale-115 -translate-y-1.5' : 'hover:scale-105'
       }`}

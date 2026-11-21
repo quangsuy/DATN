@@ -520,6 +520,103 @@ class MorrisBackend:
         if callable(set_led_fn):
             set_led_fn(robot_id, r, g, b, brightness)
 
+    def set_simulation_mode(self, enabled: bool, hardware_transport: Any = None) -> Event:
+        """Chuyển đổi linh hoạt giữa chế độ Mô phỏng Demo và Phần cứng Thực tế."""
+        if enabled:
+            if not isinstance(self.transport, SimulationTransport):
+                self._saved_hardware_transport = self.transport
+            self.transport = SimulationTransport()
+            self.physical_position_valid = True
+        else:
+            hw = hardware_transport or getattr(self, "_saved_hardware_transport", None)
+            if hw is not None:
+                self.transport = hw
+            self.physical_position_valid = True
+        return self._emit(
+            "simulation_mode",
+            enabled=isinstance(self.transport, SimulationTransport),
+        )
+
+    def hardware_check(self, camera: Any = None, serial_device: str = "/dev/ttyUSB0") -> Event:
+        """Kiểm tra toàn diện phần cứng trước khi vào bàn chơi thực tế:
+        1. Camera USB & Hiệu chuẩn 4 góc ArUco (90..93)
+        2. Kết nối Serial USB tới ESP32 Coordinator
+        3. Gửi gói tin khởi động (ROBOT_CMD_PING) tới 6 xe qua ESP-NOW và kiểm tra phản hồi PONG
+        """
+        # 1. Camera check
+        cam_status: Dict[str, Any] = {}
+        if camera is not None and hasattr(camera, "status"):
+            cam_status = dict(camera.status())
+        camera_online = bool(cam_status.get("online", self.camera_online))
+        camera_calibrated = bool(cam_status.get("calibrated", self.board_detected))
+        missing_corners = list(cam_status.get("missing_markers", [] if camera_calibrated else [90, 91, 92, 93]))
+        markers_seen = list(cam_status.get("markers_seen", []))
+        cam_robots = dict(cam_status.get("robots", {}))
+
+        # 2. Coordinator Serial check
+        hw_transport = None
+        if not isinstance(self.transport, SimulationTransport):
+            hw_transport = self.transport
+        else:
+            hw_transport = getattr(self, "_saved_hardware_transport", None)
+        coordinator_error: Optional[str] = None
+        if hw_transport is None:
+            try:
+                from .serial_coordinator import open_serial_transport
+
+                hw_transport = open_serial_transport(serial_device)
+                self._saved_hardware_transport = hw_transport
+            except Exception as exc:
+                coordinator_error = str(exc)
+
+        coordinator_connected = hw_transport is not None
+
+        # 3. Ping 6 robots via Coordinator ESP-NOW
+        robot_checks: List[Dict[str, Any]] = []
+        ping_fn = getattr(hw_transport, "ping_robot", None) if hw_transport is not None else None
+        all_robots_ok = True
+        for rid in range(1, 7):
+            espnow_ok = False
+            if callable(ping_fn):
+                try:
+                    espnow_ok = bool(ping_fn(rid, timeout_s=0.45))
+                except Exception:
+                    espnow_ok = False
+            qr_seen = rid in markers_seen or str(rid) in cam_robots
+            pose_info = cam_robots.get(str(rid)) or cam_robots.get(rid)
+            if rid in self.robots:
+                self.robots[rid].status = "idle" if espnow_ok else "offline"
+            if not espnow_ok:
+                all_robots_ok = False
+            robot_checks.append(
+                {
+                    "robot_id": rid,
+                    "team": 1 if rid <= 3 else 2,
+                    "espnow_ok": espnow_ok,
+                    "qr_seen": qr_seen,
+                    "heading_deg": round(pose_info["heading_deg"], 1) if isinstance(pose_info, dict) and "heading_deg" in pose_info else None,
+                }
+            )
+
+        ready = camera_online and camera_calibrated and coordinator_connected and all_robots_ok
+        if coordinator_connected and hw_transport is not None:
+            self.transport = hw_transport
+            self.physical_position_valid = True
+
+        return self._emit(
+            "hardware_check_result",
+            ready=ready,
+            simulation_mode=isinstance(self.transport, SimulationTransport),
+            camera_online=camera_online,
+            camera_calibrated=camera_calibrated,
+            missing_corners=missing_corners,
+            markers_seen=markers_seen,
+            coordinator_connected=coordinator_connected,
+            coordinator_device=serial_device,
+            coordinator_error=coordinator_error,
+            robots=robot_checks,
+        )
+
     def telemetry(self) -> Event:
         return self._emit(
             "system_telemetry",

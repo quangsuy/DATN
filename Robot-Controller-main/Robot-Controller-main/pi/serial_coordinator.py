@@ -7,7 +7,7 @@ from time import monotonic
 from typing import Any, Optional
 
 from .board_planner import MotionPath
-from .coordinator_protocol import ProtocolError, decode_message, encode_message, led_color_message, waypoint_message
+from .coordinator_protocol import ProtocolError, decode_message, encode_message, led_color_message, ping_message, waypoint_message
 
 
 @dataclass
@@ -74,6 +74,20 @@ class SerialCoordinatorTransport:
         except Exception:
             return False
         return self._wait_for_ack(sequence)
+
+    def ping_robot(self, robot_id: int, timeout_s: float = 0.6) -> bool:
+        """Gửi gói tin khởi động/kiểm tra (ROBOT_CMD_PING) tới xe robot_id và chờ PONG."""
+        sequence = self._next_sequence()
+        packet = ping_message(sequence, robot_id)
+        old_timeout = self.ack_timeout_s
+        self.ack_timeout_s = timeout_s
+        try:
+            self.serial_port.write(packet)
+            return self._wait_for_ack(sequence)
+        except Exception:
+            return False
+        finally:
+            self.ack_timeout_s = old_timeout
 
     def emergency_stop(self) -> None:
         sequence = self._next_sequence()

@@ -10,7 +10,9 @@ export type WSClientAction =
   | { type: 'ping' }
   | { type: 'emergency_stop' }
   | { type: 'calibrate_camera' }
-  | { type: 'set_team_color'; team: 1 | 2; r: number; g: number; b: number; brightness: number };
+  | { type: 'set_team_color'; team: 1 | 2; r: number; g: number; b: number; brightness: number }
+  | { type: 'set_simulation_mode'; enabled: boolean }
+  | { type: 'hardware_check'; serial_device?: string };
 
 export type WSServerEvent =
   | { type: 'hello_ack'; mode?: GameMode; player_team?: 1 | 2; first_player?: 1 | 2 }
@@ -72,6 +74,29 @@ export type WSServerEvent =
       g: number;
       b: number;
       brightness: number;
+    }
+  | {
+      type: 'simulation_mode';
+      enabled: boolean;
+    }
+  | {
+      type: 'hardware_check_result';
+      ready: boolean;
+      simulation_mode: boolean;
+      camera_online: boolean;
+      camera_calibrated: boolean;
+      missing_corners: number[];
+      markers_seen: number[];
+      coordinator_connected: boolean;
+      coordinator_device: string;
+      coordinator_error: string | null;
+      robots: {
+        robot_id: number;
+        team: 1 | 2;
+        espnow_ok: boolean;
+        qr_seen: boolean;
+        heading_deg: number | null;
+      }[];
     }
   | {
       type: 'ai_thinking';

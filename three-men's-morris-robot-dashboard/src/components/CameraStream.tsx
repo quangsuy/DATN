@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Camera, VideoOff, Crosshair } from 'lucide-react';
+import { Camera, VideoOff, Crosshair, MonitorPlay } from 'lucide-react';
+import { wsService } from '../network/websocket';
 
-const base = `http://${window.location.hostname}:8080`;
+const base = `http://${window.location.hostname || '127.0.0.1'}:8080`;
 
 interface CameraStatus {
   online: boolean;
@@ -16,6 +17,7 @@ export const CameraStream: React.FC = () => {
   const [hasError, setHasError] = useState(false);
   const [nonce, setNonce] = useState(0);
   const [status, setStatus] = useState<CameraStatus | null>(null);
+  const isSimulated = wsService.isSimulated;
 
   // Poll trạng thái; khi stream lỗi thì tự thử lại mỗi 3s
   useEffect(() => {
@@ -40,7 +42,9 @@ export const CameraStream: React.FC = () => {
   };
 
   const badge = hasError
-    ? { text: 'OFFLINE', cls: 'text-rose-400' }
+    ? isSimulated
+      ? { text: 'MÔ PHỎNG DEMO', cls: 'text-amber-400' }
+      : { text: 'OFFLINE', cls: 'text-rose-400' }
     : status?.calibrating
     ? { text: `HIỆU CHUẨN ${status.calibration_progress}`, cls: 'text-amber-400' }
     : status?.calibrated
@@ -55,7 +59,7 @@ export const CameraStream: React.FC = () => {
           CAMERA STREAM
         </h2>
         <div className="flex items-center gap-2">
-          <span className={`text-[10px] font-mono ${badge.cls}`}>{badge.text}</span>
+          <span className={`text-[10px] font-mono font-bold ${badge.cls}`}>{badge.text}</span>
           <button
             type="button"
             onClick={calibrate}
@@ -68,11 +72,23 @@ export const CameraStream: React.FC = () => {
       </div>
       <div className="relative aspect-video overflow-hidden rounded-2xl border border-slate-800 bg-slate-950">
         {hasError ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center text-slate-500">
-            <VideoOff className="h-8 w-8 text-slate-600" />
-            <p className="text-xs">Chưa nhận được camera stream (tự thử lại...)</p>
-            <p className="break-all text-[10px] font-mono text-slate-600">{base}/video</p>
-          </div>
+          isSimulated ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center text-slate-400">
+              <MonitorPlay className="h-9 w-9 text-amber-400/80" />
+              <p className="text-xs font-bold text-amber-300">
+                CHẾ ĐỘ MÔ PHỎNG DEMO (WEB & AI MINIMAX)
+              </p>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Không yêu cầu kết nối Camera USB, ESP32 Coordinator hay 6 xe vật lý. Bạn có thể click chọn xe ở bãi đỗ hoặc nhấn trực tiếp vào ô cờ để chơi.
+              </p>
+            </div>
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center text-slate-500">
+              <VideoOff className="h-8 w-8 text-slate-600" />
+              <p className="text-xs">Chưa nhận được camera stream (tự thử lại...)</p>
+              <p className="break-all text-[10px] font-mono text-slate-600">{base}/video</p>
+            </div>
+          )
         ) : (
           <img
             key={nonce}

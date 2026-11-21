@@ -123,6 +123,26 @@ static void handle_set_led(const LedCmd *lc) {
     }
 }
 
+// ─── Handle PING command (pre-flight check) ──────────────────
+static void handle_ping(const PingCmd *pc) {
+    uint8_t rid = pc->robot_id;
+    EventBits_t bit = (1 << (rid - 1));
+    xEventGroupClearBits(xRobotAckEvent, bit);
+    espnow_ping(rid);
+    EventBits_t result = xEventGroupWaitBits(
+        xRobotAckEvent,
+        bit,
+        pdTRUE,
+        pdFALSE,
+        pdMS_TO_TICKS(400)
+    );
+    if (result & bit) {
+        uart_pi_send_ack(pc->seq, ACK_COMPLETED);
+    } else {
+        uart_pi_send_ack(pc->seq, "timeout");
+    }
+}
+
 // ─── Public dispatcher ────────────────────────────────────────
 void cmd_handle(const PiCommand *cmd) {
     switch (cmd->type) {
@@ -134,6 +154,9 @@ void cmd_handle(const PiCommand *cmd) {
             break;
         case CMD_SET_LED:
             handle_set_led(&cmd->led);
+            break;
+        case CMD_PING:
+            handle_ping(&cmd->ping);
             break;
         case CMD_UNKNOWN:
         default:

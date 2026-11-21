@@ -38,6 +38,9 @@ void robot_registry_update(const RobotStatusPacket *pkt) {
         case ROBOT_STATUS_REACHED:
         case ROBOT_STATUS_ARRIVED: r->state = RSTATE_ARRIVED; break;
         case ROBOT_STATUS_ERROR:   r->state = RSTATE_ERROR;   break;
+        case ROBOT_STATUS_PONG:
+            if (r->state == RSTATE_OFFLINE) r->state = RSTATE_IDLE;
+            break;
         default:                   break;
     }
     portEXIT_CRITICAL(&g_mux);

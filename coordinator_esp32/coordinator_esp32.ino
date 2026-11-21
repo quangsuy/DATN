@@ -139,7 +139,8 @@ static void task_robot_status(void *param) {
 
         // Signal ACK event so cmd_handler can unblock
         if (pkt.status == ROBOT_STATUS_REACHED ||
-            pkt.status == ROBOT_STATUS_ARRIVED) {
+            pkt.status == ROBOT_STATUS_ARRIVED ||
+            pkt.status == ROBOT_STATUS_PONG) {
             EventBits_t bit = (1 << (pkt.robot_id - 1));
             xEventGroupSetBits(xRobotAckEvent, bit);
         }

@@ -18,9 +18,15 @@ log = logging.getLogger(__name__)
 
 
 class MorrisWebSocketServer:
-    def __init__(self, backend: Optional[MorrisBackend] = None, camera: Any = None) -> None:
+    def __init__(
+        self,
+        backend: Optional[MorrisBackend] = None,
+        camera: Any = None,
+        serial_device: str = "/dev/ttyUSB0",
+    ) -> None:
         self.backend = backend or MorrisBackend()
         self.camera = camera
+        self.serial_device = serial_device
         self.clients: Set[asyncio.Queue[Dict[str, Any]]] = set()
         self.backend.subscribe(self._publish)
 
@@ -67,6 +73,26 @@ class MorrisWebSocketServer:
             return
         if action_type == "ping":
             self.backend._emit("pong")
+            return
+        if action_type == "set_simulation_mode":
+            enabled = bool(action.get("enabled", True))
+            hw = None
+            if not enabled:
+                try:
+                    from .serial_coordinator import open_serial_transport
+
+                    hw = getattr(self.backend, "_saved_hardware_transport", None) or open_serial_transport(
+                        self.serial_device
+                    )
+                except Exception as exc:
+                    log.warning("Cannot open serial coordinator %s: %s", self.serial_device, exc)
+            self.backend.set_simulation_mode(enabled, hardware_transport=hw)
+            return
+        if action_type == "hardware_check":
+            self.backend.hardware_check(
+                camera=self.camera,
+                serial_device=str(action.get("serial_device", self.serial_device)),
+            )
             return
         if action_type == "set_team_color":
             # Lấy màu từ gói tin WebSocket và gửi lệnh LED tới các xe theo phe
@@ -185,7 +211,7 @@ def main() -> None:
         threading.Thread(target=http_server.serve_forever, name="camera-http", daemon=True).start()
         log.info("Camera MJPEG tại http://%s:%d/video", args.host, args.camera_port)
     log.info("Starting %s transport on ws://%s:%d", args.transport, args.host, args.port)
-    asyncio.run(MorrisWebSocketServer(backend, camera).serve(args.host, args.port))
+    asyncio.run(MorrisWebSocketServer(backend, camera, args.serial_device).serve(args.host, args.port))
 
 
 if __name__ == "__main__":

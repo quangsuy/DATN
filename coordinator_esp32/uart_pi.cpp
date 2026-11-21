@@ -110,6 +110,17 @@ bool uart_pi_parse(const char *buf, uint16_t len, PiCommand *out_cmd) {
         return true;
     }
 
+    // --- ping ---
+    if (strcmp(msg_type, MSG_PING) == 0) {
+        out_cmd->type = CMD_PING;
+        PingCmd &pc   = out_cmd->ping;
+        pc.seq        = seq;
+        int rid       = payload["robot_id"] | 0;
+        if (rid < 1 || rid > 6) return false;
+        pc.robot_id   = (uint8_t)rid;
+        return true;
+    }
+
     out_cmd->type = CMD_UNKNOWN;
     return false;
 }
