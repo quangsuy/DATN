@@ -1,0 +1,619 @@
+\documentclass[12pt,a4paper]{report}
+
+% --- CẤU HÌNH NGÔN NGỮ VÀ FONT CHỮ (PDFLATEX) ---
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage[vietnamese]{babel}
+\usepackage{amsmath, amssymb}
+\usepackage{mathptmx} % Font Times New Roman cho pdflatex
+\usepackage{anyfontsize}
+
+% --- CẤU HÌNH KHỔ GIẤY VÀ LỀ THEO MẪU ĐỀ CƯƠNG ---
+\usepackage[a4paper, left=3cm, right=2cm, top=2cm, bottom=2cm]{geometry}
+
+% --- CÁC GÓI HỖ TRỢ TRÌNH BÀY ---
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+
+% --- CỠ CHỮ 13pt, GIÃN DÒNG 19.5pt (tương đương 1.3 lines trong Word) ---
+% Lưu ý: không dùng thêm \linespread, vì sẽ nhân đôi giãn dòng.
+\makeatletter
+\renewcommand{\normalsize}{%
+	\@setfontsize\normalsize{13pt}{19.5pt}%
+	\abovedisplayskip 8\p@ \@plus2\p@ \@minus4\p@
+	\abovedisplayshortskip \z@ \@plus3\p@
+	\belowdisplayshortskip 6\p@ \@plus3\p@ \@minus3\p@
+	\belowdisplayskip \abovedisplayskip
+	\let\@listi\@listI}
+\makeatother
+\newcommand{\tablefont}{\fontsize{12pt}{15pt}\selectfont}
+
+\setlength{\parindent}{1cm}
+\setlength{\parskip}{6pt}
+\setlist{itemsep=2pt, topsep=4pt, parsep=0pt}
+\emergencystretch=3em
+
+% --- CẤU HÌNH HEADER / FOOTER ---
+\setlength{\headheight}{16pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[C]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+% Trang đầu chương mặc định dùng kiểu "plain" (số trang ở chân) -> đưa về cùng kiểu với trang thường
+\fancypagestyle{plain}{%
+	\fancyhf{}%
+	\fancyhead[C]{\thepage}%
+	\renewcommand{\headrulewidth}{0pt}%
+}
+
+% --- CẤU HÌNH MỤC LỤC 3 CẤP ---
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{3}
+
+% --- ĐỊNH DẠNG TIÊU ĐỀ CHƯƠNG VÀ MỤC ---
+% Chương không tự ngắt trang để "PHẦN NỘI DUNG" nằm cùng trang với Chương 1;
+% vì vậy cần \clearpage thủ công trước mỗi chương.
+\titleclass{\chapter}{straight}
+\titleformat{\chapter}[display]
+{\normalfont\fontsize{15pt}{20pt}\selectfont\bfseries\centering}
+{CHƯƠNG \thechapter}
+{6pt}
+{\MakeUppercase}
+\titlespacing*{\chapter}{0pt}{0pt}{18pt}
+
+\titleformat{\section}
+{\normalfont\fontsize{13pt}{18pt}\selectfont\bfseries}
+{\thesection.}
+{0.5em}
+{}
+
+\titleformat{\subsection}
+{\normalfont\fontsize{13pt}{18pt}\selectfont\bfseries}
+{\thesubsection.}
+{0.5em}
+{}
+
+\titleformat{\subsubsection}
+{\normalfont\fontsize{13pt}{18pt}\selectfont\bfseries\itshape}
+{\thesubsubsection.}
+{0.5em}
+{}
+
+% Đổi tên các danh mục tự động sang tiếng Việt chuẩn
+\addto\captionsvietnamese{%
+	\renewcommand{\contentsname}{MỤC LỤC}%
+	\renewcommand{\listtablename}{DANH MỤC CÁC BẢNG BIỂU}%
+	\renewcommand{\bibname}{DANH MỤC TÀI LIỆU THAM KHẢO}%
+}
+
+\begin{document}
+	\normalsize
+	
+	% =========================================================================
+	% TRANG BÌA (KHÔNG ĐÁNH SỐ TRANG)
+	% =========================================================================
+	\pagenumbering{gobble}
+	\begin{titlepage}
+		\begin{center}
+			\textbf{BỘ KHOA HỌC VÀ CÔNG NGHỆ}\\
+			\textbf{HỌC VIỆN CÔNG NGHỆ BƯU CHÍNH VIỄN THÔNG}\\
+			\textbf{KHOA KỸ THUẬT ĐIỆN TỬ 1}\\
+			\vspace{0.4cm}
+			\rule{6cm}{0.5pt}
+			
+			\vspace{1.8cm}
+			{\fontsize{20pt}{26pt}\selectfont\textbf{ĐỀ CƯƠNG ĐỒ ÁN TỐT NGHIỆP}}
+			
+			\vspace{1cm}
+			\textbf{Ngành: Công nghệ kỹ thuật Điện -- Điện tử}
+			
+			\vspace{1.2cm}
+			\textbf{TÊN ĐỀ TÀI:}\\[0.4cm]
+			{\fontsize{15pt}{22pt}\selectfont\textbf{NGHIÊN CỨU, ỨNG DỤNG THUẬT TOÁN MINIMAX TRONG BÀI TOÁN RA QUYẾT ĐỊNH VÀ ĐIỀU PHỐI ROBOT BẦY ĐÀN}}
+			
+			\vspace{1.8cm}
+			\begin{flushleft}
+				\hspace{1.2cm}
+				\begin{tabular}{p{4.7cm} l l}
+					\textbf{Sinh viên thực hiện:} & Dương Sơn Quang   & B22DCDT238 \\
+					& Trương Hoàng Phúc & B22DCDT234 \\
+					\textbf{Khóa:}                & \multicolumn{2}{l}{D22} \\
+					\textbf{Lớp:}                 & \multicolumn{2}{l}{D22DTMT-01} \\
+					\textbf{Cán bộ hướng dẫn:}    & \multicolumn{2}{l}{TS. Phạm Hoàng Anh} \\
+				\end{tabular}
+			\end{flushleft}
+			
+			\vfill
+			\textbf{Hà Nội, 2026}
+		\end{center}
+	\end{titlepage}
+	
+	% =========================================================================
+	% LỜI CAM ĐOAN (KHÔNG ĐÁNH SỐ TRANG)
+	% =========================================================================
+	\newpage
+	\begin{center}
+		{\fontsize{15pt}{20pt}\selectfont\textbf{LỜI CAM ĐOAN}}
+	\end{center}
+	\vspace{0.5cm}
+	
+	Chúng tôi xin cam đoan rằng:
+	\begin{itemize}[leftmargin=1.5cm]
+		\item Đề cương và nội dung đồ án tốt nghiệp là do chính hai sinh viên Dương Sơn Quang và Trương Hoàng Phúc thực hiện dưới sự hướng dẫn của TS. Phạm Hoàng Anh.
+		\item Số liệu thu thập, trích dẫn tài liệu và các kết quả phân tích, kiểm thử mã nguồn trình bày trong đồ án là hoàn toàn trung thực.
+		\item Nội dung nghiên cứu chính của đồ án không trùng lặp với bất kỳ công trình hay khóa luận nào đã được công bố trước đó.
+	\end{itemize}
+	
+	Chúng tôi xin chịu hoàn toàn trách nhiệm về tính trung thực của số liệu và nội dung trong Đồ án tốt nghiệp của mình.
+	
+	\vspace{1.2cm}
+	\begin{flushright}
+		\textit{Hà Nội, ngày ...... tháng ...... năm 2026}
+	\end{flushright}
+	\vspace{0.3cm}
+	\begin{center}
+		\begin{tabular}{*{3}{>{\centering\arraybackslash}p{4.7cm}}}
+			\textbf{CÁN BỘ HƯỚNG DẪN} & \multicolumn{2}{c}{\textbf{SINH VIÊN THỰC HIỆN}} \\
+			\textit{(Ký, ghi rõ họ tên)} & \textit{(Ký, ghi rõ họ tên)} & \textit{(Ký, ghi rõ họ tên)} \\[2.2cm]
+			\textbf{TS. Phạm Hoàng Anh} & \textbf{Dương Sơn Quang} & \textbf{Trương Hoàng Phúc} \\
+		\end{tabular}
+	\end{center}
+	
+	% =========================================================================
+	% MỤC LỤC (KHÔNG ĐÁNH SỐ TRANG)
+	% =========================================================================
+	\newpage
+	\tableofcontents
+	
+	% =========================================================================
+	% DANH MỤC CÁC TỪ VIẾT TẮT (KHÔNG ĐÁNH SỐ TRANG)
+	% =========================================================================
+	\newpage
+	\begin{center}
+		{\fontsize{15pt}{20pt}\selectfont\textbf{DANH MỤC CÁC TỪ VIẾT TẮT}}
+	\end{center}
+	\vspace{0.4cm}
+	
+	\begin{table}[h!]
+		\centering
+		\tablefont
+		\renewcommand{\arraystretch}{1.25}
+		\begin{tabular}{|c|p{2.4cm}|p{5.6cm}|p{4.6cm}|}
+			\hline
+			\textbf{STT} & \textbf{Từ viết tắt} & \textbf{Nghĩa đầy đủ Tiếng Việt} & \textbf{Nghĩa đầy đủ Tiếng Anh} \\
+			\hline
+			1 & ACK & Tín hiệu xác nhận truyền thông & Acknowledgement \\
+			\hline
+			2 & ADC & Bộ chuyển đổi tương tự sang số & Analog-to-Digital Converter \\
+			\hline
+			3 & AGV & Xe dẫn đường tự hành & Automated Guided Vehicle \\
+			\hline
+			4 & AI & Trí tuệ nhân tạo & Artificial Intelligence \\
+			\hline
+			5 & ArUco & Thẻ đánh dấu chuẩn thị giác máy tính & Augmented Reality University of Cordoba \\
+			\hline
+			6 & BFS & Thuật toán tìm kiếm theo chiều rộng & Breadth-First Search \\
+			\hline
+			7 & ESP-NOW & Giao thức truyền thông không dây ngang hàng & Espressif Wireless Communication Protocol \\
+			\hline
+			8 & GPIO & Chân vào/ra đa năng & General-Purpose Input/Output \\
+			\hline
+			9 & I2C & Giao tiếp mạch tích hợp nối tiếp & Inter-Integrated Circuit \\
+			\hline
+			10 & IMU & Bộ đo lường quán tính & Inertial Measurement Unit \\
+			\hline
+			11 & MAPF & Quy hoạch đường đi đa tác tử & Multi-Agent Path Finding \\
+			\hline
+			12 & P / PI / PD & Điều khiển tỷ lệ / tỷ lệ - tích phân / tỷ lệ - vi phân & Proportional / Proportional-Integral / Proportional-Derivative \\
+			\hline
+			13 & PWM & Điều chế độ rộng xung & Pulse Width Modulation \\
+			\hline
+			14 & UART & Bộ truyền nhận nối tiếp bất đồng bộ & Universal Asynchronous Receiver-Transmitter \\
+			\hline
+		\end{tabular}
+	\end{table}
+	
+	% =========================================================================
+	% DANH MỤC CÁC BẢNG BIỂU (KHÔNG ĐÁNH SỐ TRANG)
+	% (Đề cương không có hình vẽ dạng float nên không tạo danh mục hình vẽ rỗng.
+	%  Khi bổ sung hình, thêm lại \listoffigures và đổi tên bằng \listfigurename.)
+	% =========================================================================
+	\newpage
+	\listoftables
+	
+	% =========================================================================
+	% PHẦN MỞ ĐẦU (BẮT ĐẦU ĐÁNH SỐ TRANG TỪ 1 Ở GIỮA PHÍA TRÊN)
+	% =========================================================================
+	\clearpage
+	\pagenumbering{arabic}
+	\setcounter{page}{1}
+	
+	% Các mục của phần mở đầu đánh số 1, 2, 3, 4 (không phải 0.1, 0.2, ...)
+	\renewcommand{\thesection}{\arabic{section}}
+	
+	\chapter*{PHẦN MỞ ĐẦU}
+	\addcontentsline{toc}{chapter}{PHẦN MỞ ĐẦU}
+	
+	\section{Lý do chọn đề tài}
+	Trong bối cảnh tự động hóa công nghiệp và các hệ thống kho vận thông minh phát triển mạnh mẽ, bài toán điều phối chuyển động của nhiều robot di động cùng hoạt động trong một không gian giới hạn (hệ thống robot bầy đàn) ngày càng thu hút sự quan tâm nghiên cứu. Khác với bài toán điều khiển một robot đơn lẻ, hệ thống đa robot đòi hỏi sự kết hợp chặt chẽ giữa tầng ra quyết định chiến lược, tầng lập kế hoạch quỹ đạo tránh va chạm và tầng chấp hành thời gian thực trên từng thiết bị nhúng.
+	
+	Tuy nhiên, việc xây dựng một môi trường thử nghiệm thực tế cho bài toán ra quyết định đối kháng và điều phối bầy đàn thường gặp rào cản lớn về chi phí hạ tầng và độ phức tạp khi kiểm thử. Trò chơi cờ ba quân (\textit{Three Men's Morris}) cung cấp một mô hình hóa trực quan và chặt chẽ cho không gian làm việc dạng lưới rời rạc gồm 9 nút giao chiến lược, các tuyến di chuyển liên kết và hai vùng tập kết ngoài bàn cờ. Tại đây, thuật toán tìm kiếm đối kháng Minimax đóng vai trò là bộ sinh quyết định tối ưu theo thời gian thực, trong khi cụm 6 xe robot tự hành đóng vai trò là các tác tử vật lý thực thi nước đi và tự động né tránh lẫn nhau trên sa bàn.
+	
+	Xuất phát từ định hướng chuyên ngành Công nghệ kỹ thuật Điện -- Điện tử, đề tài \textit{``Nghiên cứu, ứng dụng thuật toán Minimax trong bài toán ra quyết định và điều phối robot bầy đàn''} được lựa chọn nhằm thiết kế một kiến trúc phân tầng hoàn chỉnh, kết nối giải thuật AI trên máy tính nhúng với hệ thống thị giác máy tính và mạng truyền thông không dây điều khiển đa robot.
+	
+	\section{Mục tiêu của đề tài}
+	Mục tiêu tổng quát của đề tài là nghiên cứu giải thuật ra quyết định Minimax kết hợp với kiến trúc điều phối robot bầy đàn tập trung, đồng thời xây dựng nền tảng phần cứng và phần mềm thử nghiệm thông qua mô hình bàn cờ tự hành \textit{Three Men's Morris} gồm 6 xe robot di động. Các mục tiêu cụ thể bao gồm:
+	\begin{enumerate}[leftmargin=1.2cm]
+		\item Nghiên cứu và cài đặt thuật toán Minimax kết hợp cắt tỉa Alpha-Beta trên máy tính nhúng Raspberry Pi 3 để đánh giá trạng thái bàn cờ và lựa chọn nước đi tối ưu theo thời gian thực.
+		\item Xây dựng dịch vụ thị giác máy tính trên Raspberry Pi 3 sử dụng camera USB để nhận diện thẻ đánh dấu chuẩn ArUco (\texttt{DICT\_5X5\_100}), thực hiện nắn phẳng mặt bàn bằng phép biến đổi đồng ứng (homography) và xác định vị trí, góc hướng của các robot trên mặt phẳng chuẩn hóa.
+		\item Xây dựng bộ lập kế hoạch quỹ đạo trên đồ thị 9 nút của sa bàn, sử dụng thuật toán tìm kiếm theo chiều rộng (BFS) và thuật toán A* để tạo lộ trình không va chạm và dời chỗ các xe cản đường.
+		\item Thiết kế phân hệ điều phối trung gian trên vi điều khiển ESP32-WROOM-32 DevKit giao tiếp UART2 với Raspberry Pi 3 và truyền nhận các gói lệnh nhị phân hai chiều với 6 xe robot qua giao thức không dây ESP-NOW.
+		\item Thiết kế và lập trình nhúng cho cụm 6 xe robot tự hành sử dụng ESP32-WROOM-32D, tích hợp cảm biến encoder, bộ đo quán tính MPU6050 và mảng 5 cảm biến hồng ngoại TCRT5000L để điều hướng theo chuỗi tọa độ waypoint.
+		\item Xây dựng giao diện giám sát Web thời gian thực hỗ trợ cả chế độ mô phỏng kiểm thử giải thuật và chế độ vận hành phần cứng thực tế.
+	\end{enumerate}
+	
+	\section{Phạm vi nghiên cứu của đề tài}
+	\begin{itemize}[leftmargin=1.2cm]
+		\item \textbf{Phạm vi nội dung nghiên cứu:} Đề tài tập trung vào kiến trúc điều phối bầy đàn tập trung (Centralized Coordination) với cơ chế thực thi tuần tự từng xe kết hợp né tránh vật cản cục bộ trên đồ thị sa bàn; chưa đi sâu vào bài toán quy hoạch đường đi đa tác tử đồng thời theo không gian -- thời gian (MAPF). Thuật toán điều khiển trên xe tập trung vào bộ điều khiển tỷ lệ (P) cho góc quay và giữ hướng kết hợp định vị lai (odometry và bắt vạch quang học).
+		\item \textbf{Phạm vi phần cứng và phần mềm:} Hệ thống bao gồm 01 máy tính nhúng Raspberry Pi 3 (chạy dịch vụ WebSocket, AI Minimax, lập kế hoạch quỹ đạo và xử lý ảnh OpenCV), 01 camera USB gắn trên cao, 01 mạch ESP32-WROOM-32 DevKit làm bộ điều phối trung gian, 06 xe robot hai bánh vi sai dùng ESP32-WROOM-32D và 01 giao diện Web xây dựng bằng React/TypeScript.
+		\item \textbf{Phạm vi không gian và thời gian:} Nghiên cứu, chế tạo và thử nghiệm được thực hiện tại phòng thí nghiệm chuyên ngành và khu vực thực hành thuộc Học viện Công nghệ Bưu chính Viễn thông trong thời gian 14 tuần theo kế hoạch thực hiện đồ án tốt nghiệp.
+	\end{itemize}
+	
+	\section{Kết quả dự kiến}
+	Các sản phẩm và mức độ hoàn thiện dự kiến của đồ án được tổng hợp trong Bảng~\ref{tab:ket_qua_du_kien}.
+	
+	\begin{table}[h!]
+		\centering
+		\tablefont
+		\caption{Tổng hợp các kết quả dự kiến của đề tài}
+		\label{tab:ket_qua_du_kien}
+		\renewcommand{\arraystretch}{1.25}
+		\begin{tabular}{|c|p{3.4cm}|p{9.6cm}|}
+			\hline
+			\textbf{STT} & \textbf{Diễn giải} & \textbf{Kết quả đạt được / Mục tiêu triển khai} \\
+			\hline
+			1 & Đề xuất giải pháp & Đề xuất kiến trúc điều phối robot bầy đàn phân tầng 3 lớp: tầng chiến lược và quy hoạch quỹ đạo trên Raspberry Pi 3, tầng chuyển tiếp đa tác vụ FreeRTOS trên ESP32-WROOM-32 DevKit và tầng chấp hành định vị lai trên 6 xe ESP32-WROOM-32D. \\
+			\hline
+			2 & Kết quả tính toán và mô phỏng & Hoàn thiện và kiểm thử đạt 44/44 bài kiểm tra đơn vị (unit test) cho giải thuật Minimax cắt tỉa Alpha-Beta, lập kế hoạch đường đi BFS/A*, giao thức truyền thông và dịch vụ camera; xây dựng thành công chế độ mô phỏng toàn ván đấu trên Web Dashboard. \\
+			\hline
+			3 & Sản phẩm demo chạy thực tế & Hoàn thiện phần cứng và mã nguồn firmware cho Coordinator và 6 xe robot tự hành; tiếp tục hoàn tất ánh xạ tọa độ milimét từ camera, đồng bộ vị trí ArUco và kiểm chứng thực nghiệm vận hành toàn bộ 6 xe trên sa bàn. \\
+			\hline
+			4 & Bài báo khoa học được công bố & Tổng hợp kết quả thiết kế và thực nghiệm hệ thống để xây dựng báo cáo khoa học sinh viên cấp Học viện (nếu đủ điều kiện về số liệu thực nghiệm). \\
+			\hline
+		\end{tabular}
+	\end{table}
+	
+	% Trả lại cách đánh số mục theo chương cho phần nội dung
+	\renewcommand{\thesection}{\thechapter.\arabic{section}}
+	
+	% =========================================================================
+	% PHẦN NỘI DUNG CỦA ĐỀ TÀI
+	% =========================================================================
+	\clearpage
+	\chapter*{PHẦN NỘI DUNG CỦA ĐỀ TÀI}
+	\addcontentsline{toc}{chapter}{PHẦN NỘI DUNG CỦA ĐỀ TÀI}
+	
+	% -------------------------------------------------------------------------
+	% CHƯƠNG 1: CƠ SỞ LÝ LUẬN
+	% -------------------------------------------------------------------------
+	\chapter{CƠ SỞ LÝ LUẬN}
+	
+	\section{Tìm hiểu nội dung cơ sở lý luận liên quan đến đề tài đồ án}
+	
+	\subsection{Bài toán ra quyết định đối kháng và thuật toán tìm kiếm Minimax}
+	Trong lý thuyết trò chơi và trí tuệ nhân tạo, các bài toán đối kháng hai bên có thông tin đầy đủ (như trò chơi cờ ba quân \textit{Three Men's Morris}) được mô hình hóa dưới dạng cây trạng thái hữu hạn. Tại mỗi nút trên cây, hai tác tử lần lượt thực hiện hành động nhằm tối đa hóa lợi ích của bản thân (tác tử MAX) và tối thiểu hóa lợi ích của đối phương (tác tử MIN).
+	
+	Hàm giá trị Minimax tại trạng thái $s$ ở độ sâu $d$ được xác định đệ quy theo biểu thức:
+	\begin{equation}
+		V(s, d) =
+		\begin{cases}
+			\text{Eval}(s) & \text{nếu } d = 0 \text{ hoặc } s \text{ là trạng thái kết thúc}, \\
+			\max_{a \in A(s)} V(\text{Result}(s, a), d - 1) & \text{nếu lượt của MAX}, \\
+			\min_{a \in A(s)} V(\text{Result}(s, a), d - 1) & \text{nếu lượt của MIN}.
+		\end{cases}
+	\end{equation}
+	
+	Để đáp ứng yêu cầu phản hồi thời gian thực trên máy tính nhúng, thuật toán được tối ưu bằng kỹ thuật \textbf{cắt tỉa Alpha-Beta} (loại bỏ các nhánh tìm kiếm chắc chắn không ảnh hưởng đến quyết định cuối cùng khi $\beta \le \alpha$), kết hợp với \textbf{bảng băm chuyển vị (Transposition Table)} lưu trữ các trạng thái đã duyệt và \textbf{sắp xếp thứ tự nước đi (Move Ordering)} ưu tiên các nước thắng trực tiếp hoặc chiếm giữ tâm bàn cờ.
+	
+	\subsection{Lý thuyết điều phối hệ thống đa tác tử và robot bầy đàn}
+	Hệ thống robot bầy đàn (Swarm Robotics) nghiên cứu cơ chế phối hợp của một nhóm nhiều robot tự hành nhằm thực hiện các nhiệm vụ vượt quá khả năng của từng cá thể đơn lẻ. Về mặt kiến trúc điều khiển, các hệ thống này chia thành hai nhóm chính:
+	\begin{itemize}[leftmargin=1.2cm]
+		\item \textbf{Điều phối phân tán (Decentralized Coordination):} Mỗi robot tự ra quyết định dựa trên cảm biến cục bộ và trao đổi thông tin lân cận.
+		\item \textbf{Điều phối tập trung (Centralized Coordination):} Một bộ xử lý trung tâm thu thập trạng thái toàn cục của toàn bộ bầy đàn, tính toán phân công nhiệm vụ và phát lệnh điều hướng tới từng nút chấp hành.
+	\end{itemize}
+	Trong không gian làm việc chật hẹp có cấu trúc dạng lưới cố định, mô hình điều phối tập trung cho phép tận dụng tầm nhìn toàn cục từ camera trên cao để ngăn ngừa xung đột vị trí và giải phóng các nút cản trở trước khi thực hiện tác vụ chính.
+	
+	\subsection{Quy hoạch đường đi trên đồ thị rời rạc và tìm kiếm tránh vật cản}
+	Sa bàn hoạt động của bầy robot được trừu tượng hóa thành một đồ thị vô hướng $G = (V, E)$, trong đó tập đỉnh $V$ bao gồm các nút giao trên bàn cờ và các vị trí tập kết trong bãi đỗ, còn tập cạnh $E$ biểu diễn các tuyến đường nối hợp lệ giữa các nút.
+	
+	Bài toán điều hướng không va chạm được giải quyết qua hai bước:
+	\begin{enumerate}[leftmargin=1.2cm]
+		\item \textbf{Giải phóng vật cản cục bộ bằng tìm kiếm theo chiều rộng (BFS):} Khi nút đích hoặc tuyến đường ngắn nhất bị một robot khác chiếm giữ, thuật toán BFS duyệt các nút lân cận trống gần nhất để tìm điểm tạm tránh (evacuation node) và tạo lệnh dời chỗ trước.
+		\item \textbf{Tìm đường đi tối ưu bằng thuật toán A*:} Sau khi hành lang di chuyển được giải phóng, thuật toán A* tìm chuỗi các nút trung gian có tổng chi phí nhỏ nhất theo hàm đánh giá $f(n) = g(n) + h(n)$, với $g(n)$ là chi phí quãng đường thực tế từ nút xuất phát và $h(n)$ là khoảng cách Euclid ước lượng tới đích.
+	\end{enumerate}
+	
+	\subsection{Thị giác máy tính và định vị mặt phẳng bằng phép biến đổi đồng ứng}
+	Để xác định vị trí và góc hướng của các robot trong không gian làm việc, hệ thống sử dụng các thẻ đánh dấu nhị phân vuông chuẩn \textbf{ArUco} thuộc bộ từ điển \texttt{DICT\_5X5\_100}. Mỗi thẻ cung cấp định danh duy nhất (ID) cùng tọa độ 4 đỉnh góc trên ảnh thu được từ camera.
+	
+	Bốn thẻ mốc đặt cố định tại bốn góc sa bàn được sử dụng để ước lượng ma trận biến đổi đồng ứng (Homography Matrix) $H \in \mathbb{R}^{3 \times 3}$, ánh xạ điểm ảnh $(u, v)$ từ góc nhìn nghiêng của camera sang hệ tọa độ mặt phẳng chuẩn hóa $(x_b, y_b)$:
+	\begin{equation}
+		s \begin{bmatrix} x_b \\ y_b \\ 1 \end{bmatrix} = H \begin{bmatrix} u \\ v \\ 1 \end{bmatrix}.
+	\end{equation}
+	Từ tọa độ các góc của thẻ gắn trên nóc mỗi robot sau khi biến đổi qua ma trận $H$, tâm hình học $(x_b, y_b)$ và góc phương vị $\theta$ của xe được tính toán trực tiếp trên mặt phẳng chuẩn hóa.
+	
+	\subsection{Điều khiển chuyển động robot vi sai và truyền thông không dây độ trễ thấp}
+	Mỗi robot di động trong hệ thống sử dụng cấu trúc truyền động vi sai hai bánh độc lập (Differential Drive) với khoảng cách hai bánh $L$ và bán kính bánh xe $R$. Quỹ đạo di chuyển của xe được ước lượng liên tục bằng phương pháp định vị tích phân (Odometry) kết hợp dữ liệu từ bộ đếm xung encoder hai bánh ($\Delta s_L, \Delta s_R$) và cảm biến vận tốc góc con quay hồi chuyển ($\omega_z$):
+	\begin{equation}
+		\Delta s = \frac{\Delta s_L + \Delta s_R}{2}, \qquad \Delta \theta_{\text{enc}} = \frac{\Delta s_L - \Delta s_R}{L}, \qquad \Delta \theta = \alpha \Delta \theta_{\text{gyro}} + (1 - \alpha)\Delta \theta_{\text{enc}},
+	\end{equation}
+	trong đó $\Delta \theta_{\text{gyro}}$ là độ biến thiên góc tính từ tích phân vận tốc góc $\omega_z$ và $\alpha$ là trọng số của con quay hồi chuyển trong bộ lọc bù (chọn $\alpha = 0{,}85$).
+	
+	Để giảm thiểu sai số tích lũy của odometry, hệ thống kết hợp thêm mảng cảm biến phản xạ hồng ngoại dưới gầm xe nhằm phát hiện vạch kẻ và giao điểm trên sa bàn. Về mặt truyền thông, giao thức \textbf{ESP-NOW} hoạt động trực tiếp trên tầng liên kết dữ liệu của chip Wi-Fi ESP32, cho phép trao đổi các khung dữ liệu nhị phân kích thước nhỏ mà không cần thiết lập kết nối điểm truy cập (Router) trung gian.
+	
+	\section{Các căn cứ kỹ thuật, tiêu chuẩn và quy chuẩn liên quan đến đề tài}
+	
+	\subsection{Tiêu chuẩn giao tiếp phần cứng và truyền thông không dây}
+	\begin{itemize}[leftmargin=1.2cm]
+		\item \textbf{Chuẩn vô tuyến IEEE 802.11 và giao thức ESP-NOW:} Hoạt động trên băng tần $2.4\text{ GHz}$ cố định kênh truyền (Channel 1), hỗ trợ đóng gói bản tin nhị phân tối đa 250 byte mỗi khung tin và xác nhận trạng thái truyền tầng vật lý.
+		\item \textbf{Chuẩn giao tiếp nối tiếp UART (TIA/EIA-232/TTL):} Thiết lập đường truyền song công mức logic $3.3\text{ V}$ giữa Raspberry Pi 3 và bộ điều phối ESP32-WROOM-32 DevKit với khung truyền định dạng JSON phân tách theo dòng.
+		\item \textbf{Chuẩn giao tiếp ngoại vi I2C và điều chế PWM:} Sử dụng giao tiếp hai dây I2C để đọc thanh ghi cảm biến quán tính MPU6050 và tín hiệu xung PWM tần số $20\text{ kHz}$ (vượt ngưỡng nghe của tai người) để điều khiển mạch cầu H DRV8833.
+		\item \textbf{Giao thức WebSocket (RFC 6455) và luồng video MJPEG qua HTTP:} Đảm bảo trao đổi dữ liệu hai chiều thời gian thực giữa máy chủ Python trên Raspberry Pi 3 và trình duyệt Web của người vận hành.
+	\end{itemize}
+	
+	\subsection{Quy chuẩn thiết kế mạch điện tử và an toàn nguồn cấp}
+	\begin{itemize}[leftmargin=1.2cm]
+		\item \textbf{An toàn mức điện áp đầu vào vi điều khiển:} Tất cả các chân tín hiệu số và tương tự (ADC1) trên vi điều khiển ESP32 phải được giới hạn điện áp không vượt quá $3.3\text{ V}$ (sử dụng cầu phân áp điện trở $5.1\text{ k}\Omega / 9.1\text{ k}\Omega$ cho cụm cảm biến hồng ngoại chạy nguồn $5\text{ V}$).
+		\item \textbf{Cách ly nhiễu và ổn định nguồn động lực:} Tách biệt đường cấp nguồn cho động cơ DC với nguồn nuôi vi điều khiển và cảm biến, đồng thời sử dụng chân điều khiển kích hoạt driver (\texttt{nSLEEP/EEP}) giữ trạng thái nghỉ khi vi điều khiển đang khởi động để tránh hiện tượng giật bánh ngoài ý muốn.
+	\end{itemize}
+	
+	% -------------------------------------------------------------------------
+	% CHƯƠNG 2: NGHIÊN CỨU VÀ PHÂN TÍCH THỰC TRẠNG CỦA ĐỀ TÀI
+	% -------------------------------------------------------------------------
+	\clearpage
+	\chapter{NGHIÊN CỨU, PHÂN TÍCH THỰC TRẠNG VÀ THIẾT KẾ HỆ THỐNG}
+	
+	\section{Giới thiệu về bài toán thực nghiệm và kiến trúc tổng thể hệ thống}
+	
+	\subsection{Mô hình hóa không gian làm việc dạng lưới qua trò chơi cờ ba quân}
+	Trong đề tài này, trò chơi cờ ba quân (\textit{Three Men's Morris}) được sử dụng làm môi trường thực nghiệm chuẩn hóa cho bài toán điều phối robot bầy đàn. Không gian hoạt động gồm 9 nút giao trên bàn cờ chính (đánh số từ $0$ đến $8$) nối với nhau theo các cạnh ngang, dọc và đường chéo chính, cùng hai khu vực bãi đỗ ở hai biên dành cho 6 xe robot (3 xe phe 1 mang ID $1$--$3$ xuất phát hướng $+x$; 3 xe phe 2 mang ID $4$--$6$ xuất phát hướng $-x$).
+	
+	Một ván đấu diễn ra qua hai giai đoạn:
+	\begin{itemize}[leftmargin=1.2cm]
+		\item \textbf{Giai đoạn đặt quân (Placement Phase):} Mỗi bên lần lượt điều phối từng xe từ bãi đỗ tiến vào chiếm giữ các nút trống trên bàn cờ cho đến khi đủ 3 quân mỗi phe.
+		\item \textbf{Giai đoạn di chuyển (Movement Phase):} Các xe trên bàn cờ di chuyển dọc theo các cạnh hợp lệ sang nút kề trống nhằm tạo thành một hàng thẳng gồm 3 quân cùng phe.
+	\end{itemize}
+	Khi một xe cần di chuyển từ bãi đỗ vào ô cờ hoặc đi qua nút đang có xe khác án ngữ, bộ điều phối phải tự động tính toán thứ tự nhường đường cho các xe liên quan trước khi thực hiện nước đi chính.
+	
+	\subsection{Kiến trúc phân tầng ba lớp của hệ thống điều phối}
+	Khắc phục hạn chế về tài nguyên tính toán và bộ nhớ khi dồn toàn bộ tác vụ xử lý ảnh, AI và giao tiếp lên một vi điều khiển đơn lẻ, hệ thống được thiết kế lại theo kiến trúc phân tầng ba lớp rõ rệt như mô tả trong Bảng~\ref{tab:kien_truc_3_tang}.
+	
+	\begin{table}[h!]
+		\centering
+		\tablefont
+		\caption{Phân chia chức năng theo kiến trúc ba tầng của hệ thống}
+		\label{tab:kien_truc_3_tang}
+		\renewcommand{\arraystretch}{1.25}
+		\begin{tabular}{|p{3.0cm}|p{3.8cm}|p{7.0cm}|}
+			\hline
+			\textbf{Tầng hệ thống} & \textbf{Nền tảng phần cứng} & \textbf{Chức năng đảm nhiệm} \\
+			\hline
+			Tầng 1: Chiến lược, thị giác và điều phối cấp cao & Raspberry Pi 3 + Camera USB & Chạy máy chủ WebSocket, thuật toán AI Minimax, lập kế hoạch quỹ đạo BFS/A*, dịch vụ thị giác máy tính OpenCV nhận diện ArUco và phục vụ Web Dashboard. \\
+			\hline
+			Tầng 2: Cầu nối chuyển tiếp thời gian thực & Mạch ESP32-WROOM-32 DevKit (38 chân) & Giao tiếp UART2 với Raspberry Pi 3, quản lý 5 tác vụ FreeRTOS, đóng gói bản tin nhị phân và truyền nhận không dây ESP-NOW tới 6 xe. \\
+			\hline
+			Tầng 3: Chấp hành và định vị cục bộ & 06 xe robot dùng ESP32-WROOM-32D & Tiếp nhận chuỗi tọa độ waypoint, điều khiển động cơ cầu H DRV8833, đọc encoder, MPU6050, 5 cảm biến vạch TCRT5000L và điều khiển 5 LED WS2812B. \\
+			\hline
+		\end{tabular}
+	\end{table}
+	
+	\section{Phân tích, thiết kế chi tiết các phân hệ kỹ thuật}
+	
+	\subsection{Phân hệ xử lý trung tâm, thuật toán Minimax và quy hoạch quỹ đạo trên Raspberry Pi 3}
+	Phần mềm điều khiển trung tâm trên Raspberry Pi 3 được phát triển bằng ngôn ngữ Python theo kiến trúc lập trình bất đồng bộ (\texttt{asyncio}), bao gồm các mô-đun cốt lõi sau:
+	\begin{itemize}[leftmargin=1.2cm]
+		\item \textbf{Bộ giải thuật AI Minimax (\texttt{minimax.py}):} Cài đặt thuật toán tìm kiếm Minimax với độ sâu tìm kiếm mặc định $d = 4$, tích hợp cắt tỉa Alpha-Beta, bảng băm lưu trạng thái đã duyệt (Transposition Table) và hàm lượng giá thế cờ dựa trên số lượng bộ đôi tiềm năng và quyền kiểm soát nút trung tâm.
+		\item \textbf{Bộ lập kế hoạch quỹ đạo (\texttt{board\_planner.py}):} Quản lý trạng thái chiếm dụng trên 9 nút bàn cờ và bãi đỗ. Khi nhận nước đi từ người chơi hoặc Minimax, mô-đun kiểm tra vật cản trên đường đi; nếu bị chặn, thuật toán BFS tìm nút trống lân cận để đẩy xe cản đường ra tạm tránh, sau đó thuật toán A* sinh chuỗi tọa độ điểm trung gian (\textit{waypoints}) và gửi tuần tự từng lệnh di chuyển xuống tầng dưới.
+		\item \textbf{Trình quản lý giao tiếp nối tiếp (\texttt{serial\_coordinator.py}):} Giao tiếp với mạch điều phối qua cổng \texttt{/dev/ttyUSB0} ở tốc độ $115200\text{ bps}$, thiết lập thời gian chờ xác nhận hoàn thành waypoint (\texttt{ACK timeout}) là $20\text{ giây}$ và thời gian chờ kiểm tra kết nối (\texttt{PING}) là $0.6\text{ giây}$.
+	\end{itemize}
+	
+	\subsection{Phân hệ thị giác máy tính nhận diện thẻ đánh dấu chuẩn DICT\_5X5\_100}
+	Dịch vụ thị giác máy tính (\texttt{camera\_service.py}) thu nhận khung hình từ camera USB (độ phân giải $640 \times 480$ ở tốc độ $30\text{ fps}$) và cung cấp các luồng dữ liệu qua giao thức HTTP tại cổng $8080$ (\texttt{/video}, \texttt{/warped}, \texttt{/status}, \texttt{/calibrate}):
+	\begin{itemize}[leftmargin=1.2cm]
+		\item \textbf{Hiệu chuẩn mặt phẳng bàn bằng homography:} Hệ thống nhận diện 4 thẻ ArUco thuộc bộ từ điển \texttt{DICT\_5X5\_100} có mã ID $90, 91, 92, 93$ đặt tại bốn góc sa bàn. Thuật toán lấy giá trị trung vị qua 15 khung hình liên tiếp để tính ma trận biến đổi đồng ứng ánh xạ vùng bàn cờ về ảnh chuẩn hóa kích thước $800 \times 800\text{ pixel}$ (\texttt{BOARD\_SIZE = 800}) và lưu thông số vào tệp \texttt{camera\_calibration.json}.
+		\item \textbf{Nhận diện và trích xuất góc hướng robot:} Đối với các thẻ ArUco mã ID từ $1$ đến $6$ gắn trên nóc xe, dịch vụ tính toán tọa độ tâm $(\texttt{board\_x}, \texttt{board\_y})$ trên mặt phẳng chuẩn hóa $800 \times 800\text{ pixel}$ đồng thời tính góc hướng hiện tại (\texttt{heading\_deg}) và vẽ mũi tên chỉ hướng trực quan trên luồng video giám sát.
+	\end{itemize}
+	
+	\subsection{Phân hệ điều phối trung gian và giao thức truyền thông nhị phân ESP-NOW}
+	Mạch điều phối trung gian sử dụng bo mạch \textbf{ESP32-WROOM-32 DevKit} hoạt động ở chế độ trạm (\texttt{WIFI\_STA}), khóa cứng kênh truyền không dây số $1$ và đăng ký sẵn địa chỉ MAC của cả 6 xe robot. Chương trình nhúng được tổ chức thành 5 tác vụ độc lập trên hệ điều hành thời gian thực FreeRTOS (\texttt{uart\_rx}, \texttt{uart\_tx}, \texttt{cmd\_hdlr}, \texttt{robot\_stat}, \texttt{heartbeat}) nhằm đảm bảo không mất gói tin khi truyền nhận đồng thời.
+	
+	Để tránh xung đột phần cứng trên vi điều khiển ESP32, cổng giao tiếp \texttt{UART2} nối với Raspberry Pi 3 được cấu hình trên chân \texttt{GPIO 13} (RX) và \texttt{GPIO 14} (TX), tách biệt hoàn toàn với chân \texttt{GPIO 16/17}. Bộ điều phối thiết lập thời gian chờ hoàn thành waypoint từ xe là $15\text{ giây}$ và thời gian chờ phản hồi \texttt{PING} là $400\text{ ms}$. Định dạng các gói tin nhị phân trao đổi qua ESP-NOW được chuẩn hóa kích thước cố định như trình bày trong Bảng~\ref{tab:goi_tin_espnow}.
+	
+	\begin{table}[h!]
+		\centering
+		\tablefont
+		\caption{Cấu trúc các gói tin nhị phân trong giao thức truyền thông ESP-NOW}
+		\label{tab:goi_tin_espnow}
+		\renewcommand{\arraystretch}{1.25}
+		\begin{tabular}{|p{3.3cm}|p{1.7cm}|p{2.3cm}|p{6.0cm}|}
+			\hline
+			\textbf{Tên cấu trúc gói tin} & \textbf{Kích thước} & \textbf{Chiều truyền} & \textbf{Nội dung các trường dữ liệu chính} \\
+			\hline
+			\texttt{RobotCmdPacket} & 18 byte & Coordinator $\rightarrow$ Xe & Mã lệnh (\texttt{WAYPOINT}, \texttt{STOP}, \texttt{PING}), ID xe ($1\text{--}6$), mã nước đi, chỉ số waypoint, tọa độ đích $(x, y)$, góc hướng và tốc độ PWM. \\
+			\hline
+			\texttt{RobotLedPacket} & 18 byte & Coordinator $\rightarrow$ Xe & Mã lệnh \texttt{SET\_LED}, ID xe ($1\text{--}6$), giá trị màu $(R, G, B)$ và độ sáng tổng thể ($0\text{--}255$). \\
+			\hline
+			\texttt{RobotStatusPacket} & 8 byte & Xe $\rightarrow$ Coordinator & ID xe ($1\text{--}6$), mã trạng thái (\texttt{IDLE}, \texttt{MOVING}, \texttt{REACHED}, \texttt{ARRIVED}, \texttt{ERROR}, \texttt{PONG}), mã nước đi, chỉ số waypoint và mã lỗi. \\
+			\hline
+		\end{tabular}
+	\end{table}
+	
+	\subsection{Phân hệ cụm sáu xe robot tự hành và thuật toán điều hướng lai}
+	Mỗi xe robot được chế tạo trên khung cơ khí hai bánh chủ động vi sai (bán kính bánh $30\text{ mm}$, khoảng cách hai bánh $100\text{ mm}$), sử dụng vi điều khiển ESP32-WROOM-32D với sơ đồ phân chân phần cứng chi tiết trong Bảng~\ref{tab:phan_chan_xe}.
+	
+	\begin{table}[h!]
+		\centering
+		\tablefont
+		\caption{Bảng phân chân kết nối phần cứng trên bo mạch xe robot ESP32-WROOM-32D}
+		\label{tab:phan_chan_xe}
+		\renewcommand{\arraystretch}{1.25}
+		\begin{tabular}{|c|p{4.2cm}|p{3.0cm}|p{4.6cm}|}
+			\hline
+			\textbf{STT} & \textbf{Khối chức năng} & \textbf{Chân GPIO} & \textbf{Chuẩn tín hiệu / Ghi chú} \\
+			\hline
+			1 & Động cơ A và Động cơ B & 33, 25 và 26, 27 & Xung PWM $20\text{ kHz}$ điều khiển cầu H DRV8833 \\
+			\hline
+			2 & Kích hoạt mạch công suất & 15 & Tín hiệu số mức cao (\texttt{HIGH} = hoạt động) \\
+			\hline
+			3 & Encoder bánh A và bánh B & 16, 18 và 17, 19 & Ngắt ngoài đếm xung hai kênh A/B \\
+			\hline
+			4 & Cảm biến quán tính MPU6050 & 21 (SDA), 22 (SCL) & Giao tiếp I2C đọc vận tốc góc trục Z \\
+			\hline
+			5 & Mảng 5 cảm biến TCRT5000L & 36, 39, 34, 35, 32 & Ngõ vào tương tự bộ chuyển đổi ADC1 \\
+			\hline
+			6 & Dải 5 LED trạng thái WS2812B & 23 & Tín hiệu số một dây có hiệu chỉnh gamma $2.2$ \\
+			\hline
+		\end{tabular}
+	\end{table}
+	
+	Thuật toán điều hướng trên xe (\texttt{code\_xe.ino}, \texttt{drive.cpp}, \texttt{localize.cpp}) vận hành theo cơ chế kết hợp hai lớp:
+	\begin{itemize}[leftmargin=1.2cm]
+		\item \textbf{Điều khiển chuyển động theo tọa độ:} Khi nhận một điểm waypoint mới, xe thực hiện hai pha tuần tự: quay tại chỗ hướng mũi xe về phía điểm đích bằng bộ điều khiển tỷ lệ (\texttt{KP\_TURN}), sau đó chạy thẳng và giữ hướng bằng bộ điều khiển tỷ lệ lái (\texttt{KP\_STEER}) kết hợp giảm tốc tuyến tính khi tiến vào vùng cách đích dưới $35\text{ mm}$.
+		\item \textbf{Định vị lai kết hợp bắt vạch quang học:} Vị trí tương đối $(x, y, \theta)$ được cập nhật liên tục ở tần số $\approx 200\text{ Hz}$ từ xung encoder và vận tốc góc con quay hồi chuyển MPU6050 (trọng số gyro $85\%$). Đồng thời, 5 cảm biến hồng ngoại TCRT5000L đọc qua bộ ADC1 tự động học ngưỡng nền/vạch thích nghi; khi xe di chuyển dọc theo các cạnh hợp lệ của bàn cờ hoặc quét qua nút giao (tối thiểu 3 mắt cùng nhận vạch), thuật toán tự động hiệu chỉnh độ lệch ngang và kéo tọa độ ước lượng về tâm nút gần nhất để giảm trôi sai số.
+	\end{itemize}
+	
+	\subsection{Giao diện giám sát thời gian thực và chế độ mô phỏng kiểm thử}
+	Giao diện điều khiển Web được xây dựng bằng React và TypeScript, kết nối trực tiếp tới máy chủ WebSocket trên Raspberry Pi 3. Giao diện hỗ trợ hai chế độ vận hành độc lập:
+	\begin{itemize}[leftmargin=1.2cm]
+		\item \textbf{Chế độ mô phỏng demo:} Tích hợp bộ mô phỏng trạng thái bàn cờ ngay trên tầng giao diện và backend, cho phép kiểm thử toàn bộ luồng chơi đối kháng với thuật toán Minimax mà không cần kết nối phần cứng ngoại vi.
+		\item \textbf{Chế độ phần cứng thực tế:} Tích hợp bảng kiểm tra trước vận hành (Pre-Flight Check) nhằm xác nhận trạng thái trực tuyến của camera, trạng thái hiệu chuẩn homography, kết nối Serial tới bộ điều phối và phản hồi \texttt{PING/PONG} từ đủ 6 xe robot, đồng thời hiển thị trực quan trạng thái nhận diện thẻ ArUco và luồng video trực tiếp từ camera.
+	\end{itemize}
+	
+	\section{Đánh giá ưu điểm của kiến trúc đề xuất}
+	So với phương án ban đầu dồn toàn bộ tác vụ lên một vi điều khiển đơn lẻ, kiến trúc hiện tại đạt được các ưu điểm nổi bật sau:
+	\begin{itemize}[leftmargin=1.2cm]
+		\item \textbf{Tối ưu hóa tài nguyên tính toán và độ ổn định:} Việc chuyển xử lý ảnh OpenCV, AI Minimax và Web Server sang Raspberry Pi 3 giúp giải phóng hoàn toàn bộ nhớ cho vi điều khiển ESP32, loại bỏ nguy cơ tràn bộ nhớ hoặc treo Watchdog khi xử lý ảnh đồng thời với truyền thông không dây.
+		\item \textbf{Tách biệt rõ ràng giữa ra quyết định và chấp hành:} Thuật toán Minimax chỉ thao tác trên không gian trạng thái trừu tượng của trò chơi, trong khi bộ lập kế hoạch quỹ đạo đảm nhiệm việc tránh vật cản và chuyển đổi thành chuỗi tọa độ waypoint, giúp hệ thống dễ dàng kiểm thử độc lập từng khối chức năng.
+		\item \textbf{Khả năng di chuyển linh hoạt ngoài đường kẻ:} Nhờ kết hợp định vị odometry (encoder + MPU6050) với mảng cảm biến hồng ngoại TCRT5000L, xe có thể di chuyển trên cả những đoạn không có vạch kẻ (từ bãi đỗ tiến vào bàn cờ hoặc lách tránh xe khác) và tự động hiệu chỉnh lại tâm khi đi dọc các tuyến đường chính trên sa bàn.
+	\end{itemize}
+	
+	\section{Đánh giá nhược điểm và những hạn chế kỹ thuật tồn tại}
+	Qua quá trình phân tích mã nguồn và kiểm thử từng phân hệ, hệ thống hiện vẫn còn một số hạn chế kỹ thuật cần tiếp tục giải quyết:
+	\begin{enumerate}[leftmargin=1.2cm]
+		\item \textbf{Chưa khép kín vòng phản hồi vị trí từ camera xuống xe:} Hiện tại, dịch vụ \texttt{camera\_service.py} mới dừng ở việc nắn phẳng mặt bàn bằng homography sang hệ tọa độ chuẩn hóa $800 \times 800\text{ pixel}$ (\texttt{board\_x}, \texttt{board\_y}) và hiển thị trạng thái nhận diện thẻ ArUco trên giao diện; hệ thống chưa có phép ánh xạ từ tọa độ pixel sang kích thước vật lý thực tế (milimét) của 9 nút cờ để tự động đồng bộ lại vị trí xe vào backend và chưa gửi hiệu chỉnh trực tiếp xuống xe trong lúc di chuyển.
+		\item \textbf{Chưa hiệu chỉnh méo ống kính camera:} Luồng xử lý ảnh hiện mới thực hiện biến đổi phối cảnh 4 điểm góc mà chưa tích hợp bước hiệu chỉnh thông số nội tại và độ méo phi tuyến của ống kính camera USB, có thể gây sai lệch vị trí ở vùng rìa bàn cờ.
+		\item \textbf{Bộ điều khiển trên xe mới dừng ở khâu tỷ lệ (P):} Thuật toán điều khiển động cơ trên xe hiện mới sử dụng hệ số tỷ lệ cho góc quay và giữ hướng mà chưa có vòng điều khiển vận tốc kín (PI) cho từng bánh xe cũng như khâu vi phân (PD) để triệt tiêu quán tính khi dừng góc.
+		\item \textbf{Điều phối tuần tự và chưa kiểm chứng thực nghiệm đồng bộ toàn bộ 6 xe:} Bộ lập kế hoạch hiện điều phối từng xe di chuyển tuần tự thay vì lập lịch đồng thời nhiều xe, đồng thời toàn bộ quy trình vận hành thực tế 6 xe trên sa bàn và đo đạc độ trễ truyền thông ESP-NOW mới hoàn thiện ở mức mã nguồn, cần được kiểm chứng thực nghiệm toàn diện.
+	\end{enumerate}
+	
+	% -------------------------------------------------------------------------
+	% CHƯƠNG 3: GIẢI PHÁP KHẮC PHỤC NHƯỢC ĐIỂM VÀ KẾ HOẠCH HOÀN THIỆN
+	% -------------------------------------------------------------------------
+	\clearpage
+	\chapter{GIẢI PHÁP KHẮC PHỤC NHƯỢC ĐIỂM VÀ KẾ HOẠCH HOÀN THIỆN}
+	
+	\section{Giải pháp khắc phục nhược điểm 1: Hiệu chỉnh méo ống kính và ánh xạ tọa độ pixel sang milimét đồng bộ tự động}
+	Để loại bỏ sai số hình học và khép kín dữ liệu giữa thị giác máy tính với bộ lập kế hoạch quỹ đạo, đề tài đề xuất quy trình nâng cấp mô-đun \texttt{camera\_service.py} và \texttt{backend.py} theo hai bước:
+	\begin{itemize}[leftmargin=1.2cm]
+		\item \textbf{Hiệu chỉnh thông số nội tại camera (Camera Intrinsics Calibration):} Sử dụng bàn cờ hiệu chuẩn chuẩn hóa (Chessboard) để xác định ma trận nội tại $K$ và các hệ số méo ống kính $(k_1, k_2, p_1, p_2)$, lưu trữ thành tệp cấu hình cố định và áp dụng hàm khử méo ảnh trước khi tính toán ma trận đồng ứng homography.
+		\item \textbf{Ánh xạ tuyến tính sang hệ tọa độ milimét và đồng bộ tự động:} Thiết lập ma trận quy đổi từ không gian ảnh nắn phẳng $800 \times 800\text{ pixel}$ sang kích thước vật lý thực tế của sa bàn (tính bằng milimét), từ đó ánh xạ tọa độ tâm của các thẻ ArUco ID $1$--$6$ về đúng chỉ số 9 nút bàn cờ ($0\text{--}8$) và 6 vị trí bãi đỗ. Kết quả này sẽ được gọi tự động qua hàm đồng bộ vị trí (\texttt{resync\_positions}) trước mỗi lượt chơi để đảm bảo trạng thái logic luôn khớp với vị trí vật lý.
+	\end{itemize}
+	
+	\section{Giải pháp khắc phục nhược điểm 2: Tích hợp điều khiển phản hồi vòng kín từ thị giác máy tính và hoàn thiện bộ điều khiển PI/PD trên xe}
+	Nhằm nâng cao độ chính xác dừng tại tâm nút cờ và đảm bảo tính đồng nhất chuyển động giữa cả 6 xe robot, hệ thống sẽ được bổ sung hai cơ chế điều khiển sau:
+	\begin{itemize}[leftmargin=1.2cm]
+		\item \textbf{Nâng cấp bộ điều khiển tốc độ PI và góc hướng PD trên firmware xe:} Bổ sung vòng lặp điều khiển tỷ lệ -- tích phân (PI) ở chu kỳ $10\text{--}20\text{ ms}$ dựa trên xung phản hồi encoder để ép vận tốc thực tế của hai bánh trái/phải bám đúng vận tốc đặt, khắc phục sự sai khác ma sát cơ khí và sụt áp pin giữa các xe. Đồng thời, bổ sung khâu vi phân (PD) sử dụng trực tiếp vận tốc góc $\omega_z$ từ cảm biến MPU6050 để hãm đà quán tính khi xe quay tới gần góc đích.
+		\item \textbf{Cập nhật vị trí hiệu chỉnh từ camera sau mỗi chặng di chuyển:} Sau khi xe hoàn thành một waypoint và gửi tín hiệu xác nhận, Raspberry Pi 3 đối chiếu tọa độ thực tế từ camera ArUco; nếu sai số vị trí vượt ngưỡng cho phép, hệ thống tự động phát gói lệnh đồng bộ lại tọa độ chuẩn $(x, y, \theta)$ xuống xe trước khi thực hiện bước di chuyển kế tiếp.
+	\end{itemize}
+	
+	\section{Giải pháp khắc phục nhược điểm 3: Mở rộng điều phối đa tác tử và kiểm chứng thực nghiệm toàn diện trên sa bàn}
+	Để hoàn thiện giá trị nghiên cứu của bài toán điều phối bầy đàn và khẳng định tính tin cậy của hệ thống trước khi bảo vệ đồ án, các hạng mục thực nghiệm sau sẽ được triển khai:
+	\begin{itemize}[leftmargin=1.2cm]
+		\item \textbf{Nâng cấp thuật toán lập lịch tránh xung đột:} Mở rộng bộ lập kế hoạch quỹ đạo theo hướng kiểm tra giao cắt lộ trình giữa các tác tử, tiến tới thử nghiệm giải thuật lập lịch có xét yếu tố thời gian cho phép nhiều xe di chuyển đồng thời trên các hành lang không giao nhau.
+		\item \textbf{Quy trình đo kiểm và đánh giá thực nghiệm:} Tiến hành đo đạc thực tế trên sa bàn với đầy đủ 6 xe robot qua các kịch bản: đo độ trễ truyền nhận gói tin ESP-NOW và tỷ lệ mất gói trong môi trường có nhiễu Wi-Fi; đánh giá sai số dừng tại 9 nút bàn cờ trước và sau khi bật hiệu chỉnh cảm biến vạch TCRT5000L; kiểm thử liên tục ít nhất 20 ván cờ đối kháng hoàn chỉnh giữa người chơi và AI Minimax.
+	\end{itemize}
+	
+	\section{Kế hoạch triển khai và phân công nhiệm vụ chi tiết}
+	Quá trình thực hiện đồ án được chia thành 6 giai đoạn trong thời gian 14 tuần theo lộ trình trình bày trong Bảng~\ref{tab:ke_hoach_14_tuan}.
+	
+	\begin{table}[h!]
+		\centering
+		\tablefont
+		\caption{Kế hoạch triển khai thực hiện đồ án tốt nghiệp trong 14 tuần}
+		\label{tab:ke_hoach_14_tuan}
+		\renewcommand{\arraystretch}{1.25}
+		\begin{tabular}{|c|p{7.2cm}|c|c|}
+			\hline
+			\textbf{Giai đoạn} & \textbf{Nội dung công việc chính} & \textbf{Tuần bắt đầu} & \textbf{Thời lượng} \\
+			\hline
+			Giai đoạn 1 & Nghiên cứu lý thuyết giải thuật Minimax, điều phối robot bầy đàn, thiết kế kiến trúc tổng thể 3 tầng và lựa chọn linh kiện phần cứng. & Tuần 1 & 2 tuần \\
+			\hline
+			Giai đoạn 2 & Thiết kế mạch nguyên lý, mạch in (PCB), gia công cơ khí, lắp ráp hoàn thiện cụm 6 xe robot tự hành và bộ điều phối ESP32-WROOM-32 DevKit. & Tuần 3 & 3 tuần \\
+			\hline
+			Giai đoạn 3 & Xây dựng phần mềm trên Raspberry Pi 3 (AI Minimax, lập kế hoạch quỹ đạo BFS/A*, dịch vụ thị giác máy tính ArUco) và giao diện Web Dashboard. & Tuần 5 & 3 tuần \\
+			\hline
+			Giai đoạn 4 & Lập trình nhúng FreeRTOS cho bộ điều phối trung gian, giao thức truyền thông nhị phân ESP-NOW và firmware điều hướng lai cho 6 xe. & Tuần 7 & 3 tuần \\
+			\hline
+			Giai đoạn 5 & Tích hợp hệ thống, hiệu chỉnh thông số cảm biến TCRT5000L, ánh xạ tọa độ milimét từ camera, tinh chỉnh bộ điều khiển PI/PD và chạy thử nghiệm 6 xe. & Tuần 10 & 3 tuần \\
+			\hline
+			Giai đoạn 6 & Thu thập số liệu thực nghiệm, hoàn thiện quyển báo cáo đồ án tốt nghiệp, chuẩn bị slide thuyết trình và bảo vệ trước hội đồng. & Tuần 12 & 3 tuần \\
+			\hline
+		\end{tabular}
+	\end{table}
+	
+	% =========================================================================
+	% KẾT LUẬN VÀ KIẾN NGHỊ
+	% =========================================================================
+	\clearpage
+	\chapter*{KẾT LUẬN VÀ KIẾN NGHỊ}
+	\addcontentsline{toc}{chapter}{KẾT LUẬN VÀ KIẾN NGHỊ}
+	
+	\section*{Kết luận}
+	Đề cương đã xác định rõ mục tiêu, phạm vi và kiến trúc kỹ thuật của đề tài \textit{``Nghiên cứu, ứng dụng thuật toán Minimax trong bài toán ra quyết định và điều phối robot bầy đàn''}. Thông qua việc kết hợp giải thuật tìm kiếm đối kháng Minimax cắt tỉa Alpha-Beta, quy hoạch đường đi trên đồ thị rời rạc (BFS/A*), thị giác máy tính nhận diện thẻ ArUco và mạng truyền thông không dây ESP-NOW, hệ thống tạo ra một nền tảng thử nghiệm trực quan và linh hoạt cho bài toán điều phối đa robot trong không gian giới hạn.
+	
+	Đến thời điểm hiện tại, kiến trúc phần mềm điều khiển trung tâm trên Raspberry Pi 3, bộ giải thuật Minimax (đã vượt qua 44/44 bài kiểm thử tự động), giao diện Web giám sát hỗ trợ chế độ mô phỏng cùng mã nguồn firmware cho bộ điều phối và 6 xe robot đã được xây dựng hoàn chỉnh. Đây là cơ sở kỹ thuật vững chắc để chuyển sang giai đoạn hiệu chỉnh phần cứng, đồng bộ tọa độ thực tế và kiểm chứng vận hành đồng bộ trên sa bàn.
+	
+	\section*{Kiến nghị}
+	Để tiếp tục nâng cao tính ứng dụng và độ chính xác của hệ thống trong các giai đoạn nghiên cứu tiếp theo, nhóm tác giả đề xuất một số hướng mở rộng sau:
+	\begin{enumerate}[leftmargin=1.2cm]
+		\item Hoàn thiện cơ chế phản hồi vị trí thời gian thực từ camera trên cao trực tiếp vào vòng điều khiển chuyển động của từng xe nhằm triệt tiêu hoàn toàn sai số trôi tích lũy khi vận hành liên tục trong thời gian dài.
+		\item Nghiên cứu áp dụng các thuật toán quy hoạch đường đi đa tác tử đồng thời (như CBS -- Conflict-Based Search) thay cho cơ chế điều phối tuần tự từng xe, qua đó nâng cao hiệu suất vận hành khi mở rộng quy mô số lượng robot trong bầy đàn.
+		\item Tích hợp mạch giám sát điện áp pin trên từng xe để gửi cảnh báo mức năng lượng về bộ điều phối trung tâm, hỗ trợ tự động điều hướng xe về trạm sạc khi điện áp xuống thấp.
+	\end{enumerate}
+	
+	% =========================================================================
+	% DANH MỤC TÀI LIỆU THAM KHẢO (KHÔNG ĐÁNH SỐ TRANG, >= 8 TÀI LIỆU)
+	% =========================================================================
+	\clearpage
+	\pagestyle{empty}
+	\begin{center}
+		{\fontsize{15pt}{20pt}\selectfont\textbf{DANH MỤC TÀI LIỆU THAM KHẢO}}
+	\end{center}
+	\vspace{0.4cm}
+	
+	\noindent\textbf{Tiếng Việt}
+	\begin{enumerate}[leftmargin=1.2cm]
+		\item Từ Minh Phương (2018), \textit{Giáo trình Trí tuệ nhân tạo}, Học viện Công nghệ Bưu chính Viễn thông, Hà Nội.
+		\item Nguyễn Doãn Phước (2017), \textit{Lý thuyết điều khiển tuyến tính}, Nhà xuất bản Khoa học và Kỹ thuật, Hà Nội.
+	\end{enumerate}
+	
+	\vspace{0.3cm}
+	\noindent\textbf{Tiếng Anh}
+	\begin{enumerate}[leftmargin=1.2cm, start=3]
+		\item Bradski, G., \& Kaehler, A. (2016), \textit{Learning OpenCV 3: Computer Vision in C++ with the OpenCV Library}, O'Reilly Media, Sebastopol, CA.
+		\item Espressif Systems (2025), \textit{ESP-NOW User Guide and ESP-IDF Programming Manual}, Espressif Systems Technical Documentation, Shanghai.
+		\item Garrido-Jurado, S., Muñoz-Salinas, R., Madrid-Cuevas, F. J., \& Marín-Jiménez, M. J. (2014), Automatic generation and detection of highly reliable fiducial markers under occlusion, \textit{Pattern Recognition}, Vol. 47, No. 6, pp. 2280--2292.
+		\item Hart, P. E., Nilsson, N. J., \& Raphael, B. (1968), A Formal Basis for the Heuristic Determination of Minimum Cost Paths, \textit{IEEE Transactions on Systems Science and Cybernetics}, Vol. 4, No. 2, pp. 100--107.
+		\item InvenSense, \textit{MPU-6000 and MPU-6050 Product Specification}, Datasheet.
+		\item Russell, S., \& Norvig, P. (2020), \textit{Artificial Intelligence: A Modern Approach} (4th ed.), Pearson Education, Hoboken, NJ.
+		\item Siegwart, R., Nourbakhsh, I. R., \& Scaramuzza, D. (2011), \textit{Introduction to Autonomous Mobile Robots} (2nd ed.), MIT Press, Cambridge, MA.
+		\item Texas Instruments, \textit{DRV8833 Dual H-Bridge Motor Driver}, Datasheet.
+	\end{enumerate}
+	
+\end{document}

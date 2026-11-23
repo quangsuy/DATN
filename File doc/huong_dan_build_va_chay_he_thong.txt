@@ -1,0 +1,158 @@
+================================================================================
+HƯỚNG DẪN BUILD VÀ CHẠY HỆ THỐNG CỜ NGƯỜI TỰ HÀNH (THREE MEN'S MORRIS)
+Thiết bị trung tâm: Raspberry Pi 3 (IP tĩnh: 192.168.150.107)
+================================================================================
+
+THÔNG TIN KẾT NỐI CHUNG
+- SSH vào Pi 3     : ssh root@192.168.150.107
+- Giao diện Web    : http://192.168.150.107:3000
+- WebSocket Server : ws://192.168.150.107:8765
+- Luồng Camera     : http://192.168.150.107:8080/video
+- Thư mục Backend  : /root/DATN/Robot-Controller-main/Robot-Controller-main
+- Thư mục Frontend : /root/DATN/three-men's-morris-robot-dashboard
+
+
+================================================================================
+PHẦN 1: BUILD VÀ KIỂM TRA MÃ NGUỒN (CHỈ CẦN CHẠY KHI CÓ CẬP NHẬT CODE MỚI)
+================================================================================
+
+1. Kiểm tra và cài thư viện Backend (Python)
+--------------------------------------------------------------------------------
+cd /root/DATN/Robot-Controller-main/Robot-Controller-main
+source .venv/bin/activate
+python -m pip install -r pi/requirements.txt
+pytest pi/
+python -m compileall -q pi
+
+* Ghi chú: Thoát môi trường ảo Python trước khi sang bước build Web bằng lệnh:
+deactivate
+
+2. Build giao diện Web Dashboard (React / Vite)
+--------------------------------------------------------------------------------
+cd "/root/DATN/three-men's-morris-robot-dashboard"
+npm install
+chmod +x node_modules/.bin/vite node_modules/vite/bin/vite.js 2>/dev/null
+npm run build
+
+* Nếu lệnh "npm run build" báo lỗi quyền thực thi Vite, dùng lệnh thay thế:
+node node_modules/vite/bin/vite.js build
+
+
+================================================================================
+PHẦN 2: CHẾ ĐỘ 1 - MÔ PHỎNG DEMO (KHÔNG CẦN CAMERA, ESP32 HAY XE THẬT)
+================================================================================
+Dùng để test luật chơi, AI Minimax và giao diện Web độc lập.
+
+1. Terminal 1 - Chạy Backend ở chế độ Simulation (cổng 8765)
+--------------------------------------------------------------------------------
+ssh root@192.168.150.107
+cd /root/DATN/Robot-Controller-main/Robot-Controller-main
+source .venv/bin/activate
+
+python -m pi.websocket_server \
+  --transport simulation \
+  --host 0.0.0.0 \
+  --port 8765
+
+2. Terminal 2 - Chạy Web Dashboard (cổng 3000)
+--------------------------------------------------------------------------------
+ssh root@192.168.150.107
+cd "/root/DATN/three-men's-morris-robot-dashboard"
+npm run preview -- --host 0.0.0.0 --port 3000
+
+3. Thao tác trên trình duyệt Windows
+--------------------------------------------------------------------------------
+- Truy cập: http://192.168.150.107:3000
+- Đảm bảo địa chỉ WebSocket là: ws://192.168.150.107:8765
+- Chọn chế độ: MÔ PHỎNG DEMO -> Bấm vào bàn cờ để chơi trực tiếp.
+
+
+================================================================================
+PHẦN 3: CHẾ ĐỘ 2 - PHẦN CỨNG THỰC TẾ (CAMERA + COORDINATOR + 6 XE ROBOT)
+================================================================================
+
+1. Kiểm tra phần cứng trước khi bật server
+--------------------------------------------------------------------------------
+- Webcam USB đã cắm vào Pi 3.
+- Mạch ESP32-CAM Coordinator nối với USB-TTL vào Pi 3 theo đúng chân UART2 mới:
+    + 5V (USB-TTL)  -> chân 5V trên ESP32-CAM (tránh dùng 3V3 gây sụt áp BOD)
+    + GND           -> GND
+    + TX (USB-TTL)  -> GPIO 13 (RX2 của ESP32-CAM)
+    + RX (USB-TTL)  -> GPIO 14 (TX2 của ESP32-CAM)
+- Kiểm tra thiết bị nhận diện trên Linux Pi 3:
+    ls -l /dev/ttyUSB*
+    ls -l /dev/video*
+- Đặt 6 xe robot vào đúng bãi đỗ, đầu xe hướng vào bàn cờ, giữ xe đứng yên
+  trong 2 giây đầu khi bật nguồn để cảm biến MPU6050 tự hiệu chỉnh góc 0.
+
+2. (Tùy chọn) Chạy lẻ Camera để căn góc và hiệu chuẩn 4 mã ArUco (90-93)
+--------------------------------------------------------------------------------
+cd /root/DATN/Robot-Controller-main/Robot-Controller-main
+source .venv/bin/activate
+
+python -m pi.camera_service \
+  --device 0 \
+  --width 640 \
+  --height 480 \
+  --fps 30 \
+  --port 8080 \
+  --calibrate
+
+- Xem hình ảnh thực tế tại : http://192.168.150.107:8080/video
+- Xem bàn cờ nắn phẳng tại : http://192.168.150.107:8080/warped
+- Xem tọa độ JSON tại      : http://192.168.150.107:8080/status
+- Nếu cần hiệu chuẩn lại   : curl -X POST http://192.168.150.107:8080/calibrate
+- Sau khi xong, nhấn Ctrl + C để tắt dịch vụ lẻ trước khi chạy bước 3.
+
+3. Terminal 1 - Chạy đồng thời Backend Serial + Camera (cổng 8765 và 8080)
+--------------------------------------------------------------------------------
+ssh root@192.168.150.107
+cd /root/DATN/Robot-Controller-main/Robot-Controller-main
+source .venv/bin/activate
+
+python -m pi.websocket_server \
+  --transport serial \
+  --serial-device /dev/ttyUSB0 \
+  --camera \
+  --camera-port 8080 \
+  --camera-device 0 \
+  --host 0.0.0.0 \
+  --port 8765
+
+4. Terminal 2 - Chạy Web Dashboard (cổng 3000)
+--------------------------------------------------------------------------------
+ssh root@192.168.150.107
+cd "/root/DATN/three-men's-morris-robot-dashboard"
+npm run preview -- --host 0.0.0.0 --port 3000
+
+5. Thao tác trên trình duyệt Windows
+--------------------------------------------------------------------------------
+- Truy cập: http://192.168.150.107:3000
+- Chọn chế độ: PHẦN CỨNG THỰC TẾ
+- Mở bảng Pre-Flight và hoàn tất đủ 4 mục trước khi bấm vào bàn cờ:
+    [1] Camera và calibration (đủ 4 góc ArUco 90-93)
+    [2] Serial Coordinator (/dev/ttyUSB0 kết nối thông)
+    [3] PING/PONG 6 xe (ID 1-6 phản hồi trực tuyến)
+    [4] Nhận diện ArUco ID 1-6 và đồng bộ vị trí (Resync)
+
+
+================================================================================
+PHẦN 4: MẸO XỬ LÝ NHANH CÁC LỖI THƯỜNG GẶP
+================================================================================
+1. Chạy Web chạy ngầm (để chỉ cần mở 1 cửa sổ SSH duy nhất):
+   - Bật Web chạy ngầm:
+     cd "/root/DATN/three-men's-morris-robot-dashboard"
+     nohup npm run preview -- --host 0.0.0.0 --port 3000 > /tmp/web.log 2>&1 &
+   - Tắt Web chạy ngầm:
+     pkill -f "vite"
+
+2. Lỗi "Bad action: robot positions require camera resynchronization":
+   - Nguyên nhân: Backend đang chạy "--transport serial" nhưng chưa đồng bộ
+     vị trí xe từ Camera, hoặc bạn đang muốn chơi thử không cần phần cứng
+     nhưng quên đổi cờ sang "--transport simulation".
+
+3. Lỗi "externally-managed-environment" khi dùng pip:
+   - Nguyên nhân: Chưa kích hoạt môi trường ảo. Hãy chạy:
+     cd /root/DATN/Robot-Controller-main/Robot-Controller-main
+     source .venv/bin/activate
+================================================================================
