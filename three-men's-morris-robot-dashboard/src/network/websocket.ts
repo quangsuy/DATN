@@ -50,11 +50,19 @@ class LocalSimulationEngine {
   public placedCount: Record<1 | 2, number> = { 1: 0, 2: 0 };
   public winner: 1 | 2 | null = null;
   public winningLine: number[] | null = null;
+  public isDraw: boolean = false;
+  public drawReason: string | null = null;
+  public movePhaseCount: number = 0;
+  private stateCounts: Map<string, number> = new Map();
   public robotNodes: Record<number, number | null> = { 1: null, 2: null, 3: null, 4: null, 5: null, 6: null };
   private busy: boolean = false;
   private timers: any[] = [];
 
   constructor(private emit: (event: WSServerEvent) => void) {}
+
+  private canonicalStateKey(b: (number | null)[], turn: 1 | 2): string {
+    return `${b.map((c) => (c === null ? '0' : String(c))).join('')}:${turn}`;
+  }
 
   public clearTimers() {
     this.timers.forEach((t) => clearTimeout(t));
@@ -79,6 +87,10 @@ class LocalSimulationEngine {
     this.placedCount = { 1: 0, 2: 0 };
     this.winner = null;
     this.winningLine = null;
+    this.isDraw = false;
+    this.drawReason = null;
+    this.movePhaseCount = 0;
+    this.stateCounts.clear();
     this.robotNodes = { 1: null, 2: null, 3: null, 4: null, 5: null, 6: null };
     this.emit({ type: 'reset_game' });
     for (let id = 1; id <= 6; id++) {
@@ -100,6 +112,8 @@ class LocalSimulationEngine {
       turn_count: this.turnCount,
       winner: this.winner,
       winning_line: this.winningLine,
+      is_draw: this.isDraw,
+      draw_reason: this.drawReason,
     });
   }
 
@@ -170,7 +184,7 @@ class LocalSimulationEngine {
   }
 
   public executeMove(player: 1 | 2, robotId: number, fromNode: number | null, toNode: number) {
-    if (this.busy || this.winner !== null) return;
+    if (this.busy || this.winner !== null || this.isDraw) return;
     if (player !== this.currentPlayer) {
       this.emit({ type: 'fault', robot_id: robotId, message: 'Chưa tới lượt của đội này' });
       return;
@@ -286,6 +300,7 @@ class LocalSimulationEngine {
 
     // 4. Commit logical board state
     this.schedule(() => {
+      const wasMovePhase = fromNode !== null;
       if (fromNode !== null) {
         this.board[fromNode] = null;
       } else {
@@ -297,12 +312,29 @@ class LocalSimulationEngine {
       if (this.placedCount[1] >= 3 && this.placedCount[2] >= 3) {
         this.phase = 'move';
       }
+      if (wasMovePhase) {
+        this.movePhaseCount += 1;
+      }
 
       const winCheck = this.checkWin(this.board);
       this.winner = winCheck.winner;
       this.winningLine = winCheck.line;
       if (!this.winner) {
         this.currentPlayer = this.currentPlayer === 1 ? 2 : 1;
+        if (this.phase === 'move') {
+          const stateKey = this.canonicalStateKey(this.board, this.currentPlayer);
+          const repCount = (this.stateCounts.get(stateKey) ?? 0) + 1;
+          this.stateCounts.set(stateKey, repCount);
+          if (repCount >= 5) {
+            this.isDraw = true;
+            this.drawReason = 'fivefold_repetition';
+            this.phase = 'game_over';
+          } else if (this.movePhaseCount >= 50) {
+            this.isDraw = true;
+            this.drawReason = 'fifty_move_rule';
+            this.phase = 'game_over';
+          }
+        }
       } else {
         this.phase = 'game_over';
       }
@@ -315,10 +347,12 @@ class LocalSimulationEngine {
         board: [...this.board],
       });
 
-      if (this.winner) {
+      if (this.winner || this.isDraw) {
         this.emit({
           type: 'game_over',
           winner: this.winner,
+          is_draw: this.isDraw,
+          draw_reason: this.drawReason,
           winning_line: this.winningLine || [],
           board: [...this.board],
         });
@@ -326,7 +360,7 @@ class LocalSimulationEngine {
       this.snapshot();
       this.busy = false;
 
-      if (!this.winner && this.mode === 'pva' && this.currentPlayer !== this.playerTeam) {
+      if (!this.winner && !this.isDraw && this.mode === 'pva' && this.currentPlayer !== this.playerTeam) {
         this.schedule(() => this.runAiTurn(), 400);
       }
     }, delayMs);
@@ -355,7 +389,7 @@ class LocalSimulationEngine {
   }
 
   private runAiTurn() {
-    if (this.winner !== null || this.busy) return;
+    if (this.winner !== null || this.isDraw || this.busy) return;
     const aiPlayer: 1 | 2 = this.playerTeam === 1 ? 2 : 1;
     if (this.currentPlayer !== aiPlayer) return;
 
@@ -572,7 +606,12 @@ class LocalSimulationEngine {
     const beta = 99999;
 
     for (const entry of orderedRoot) {
-      const sc = minimax(entry.nb, humanPlayer, entry.np, maxDepth - 1, alpha, beta);
+      const nextKey = this.canonicalStateKey(entry.nb, humanPlayer);
+      const nextRep = (this.stateCounts.get(nextKey) ?? 0) + 1;
+      const sc =
+        entry.np[1] >= 3 && entry.np[2] >= 3 && nextRep >= 5
+          ? 0
+          : minimax(entry.nb, humanPlayer, entry.np, maxDepth - 1, alpha, beta);
       if (sc > bestScore) {
         bestScore = sc;
         bestMove = entry.move;

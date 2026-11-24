@@ -5,6 +5,7 @@ import { sound } from '../utils/sound';
 interface VictoryModalProps {
   winner: 1 | 2 | null;
   isDraw?: boolean;
+  drawReason?: string | null;
   gameMode: 'pvp' | 'pva';
   onPlayAgain: () => void;
   onBackToMenu: () => void;
@@ -14,6 +15,7 @@ interface VictoryModalProps {
 export const VictoryModal: React.FC<VictoryModalProps> = ({
   winner,
   isDraw = false,
+  drawReason = null,
   gameMode,
   onPlayAgain,
   onBackToMenu,
@@ -102,7 +104,10 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
 
   if (isDraw) {
     title = 'HÒA CỜ!';
-    subtitle = 'Cả hai người chơi đều phòng thủ xuất sắc!';
+    subtitle =
+      drawReason === 'fifty_move_rule'
+        ? 'Đã quá 50 nước di chuyển không phân thắng bại! Hệ thống tự động dừng điều phối xe để bảo vệ pin và tránh trôi sai số Encoder.'
+        : 'Trạng thái bàn cờ đã lặp lại 5 lần (5-Fold Repetition)! Hệ thống tự động dừng điều phối xe để bảo vệ pin và tránh trôi sai số Encoder.';
     titleColor = 'text-amber-400';
     badgeBg = 'bg-amber-500/20 border-amber-400';
   } else if (isAiWin) {
@@ -158,7 +163,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
               className="w-full py-3.5 px-6 rounded-2xl font-bold text-sm bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg shadow-cyan-600/30 flex items-center justify-center gap-2 transform active:scale-95 transition-all"
             >
               <Eye className="w-4 h-4" />
-              XEM LẠI THẾ CỜ CHIẾN THẮNG
+              {isDraw ? 'XEM LẠI THẾ CỜ HÒA' : 'XEM LẠI THẾ CỜ CHIẾN THẮNG'}
             </button>
           )}
 

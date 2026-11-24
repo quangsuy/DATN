@@ -37,6 +37,8 @@ def _evaluate(state: GameState, ai_player: Player) -> int:
         return 1000
     if state.winner == opponent:
         return -1000
+    if state.is_draw:
+        return 0
 
     score = 0
     c = b[4]
@@ -126,6 +128,8 @@ def choose_move(state: GameState, ai_player: Player = 2, max_depth: int = 8) -> 
                 priority = -2000
             elif next_state.winner is not None:
                 priority = 2000
+            elif next_state.is_draw:
+                priority = 0
             else:
                 priority = -_evaluate(next_state, ai_player)
             entries.append((priority, move, next_state))
@@ -138,6 +142,8 @@ def choose_move(state: GameState, ai_player: Player = 2, max_depth: int = 8) -> 
             return 1000 + depth
         if current.winner is not None:
             return -1000 - depth
+        if current.is_draw:
+            return 0
         if depth == 0:
             return _evaluate(current, ai_player)
 

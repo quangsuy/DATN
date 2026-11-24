@@ -110,6 +110,8 @@ class MorrisBackend:
             turn_count=self.state.turn_count,
             winner=self.state.winner,
             winning_line=list(self.state.winning_line) if self.state.winning_line else None,
+            is_draw=self.state.is_draw,
+            draw_reason=self.state.draw_reason,
         )
 
     def reset(
@@ -431,10 +433,12 @@ class MorrisBackend:
             goal=target_node,
             board=list(self.state.board),
         )
-        if self.state.winner is not None:
+        if self.state.winner is not None or self.state.is_draw:
             self._emit(
                 "game_over",
                 winner=self.state.winner,
+                is_draw=self.state.is_draw,
+                draw_reason=self.state.draw_reason,
                 winning_line=list(self.state.winning_line or ()),
                 board=list(self.state.board),
             )
@@ -458,7 +462,12 @@ class MorrisBackend:
         return self.execute_move(move)
 
     def ai_move(self, depth: int = 8) -> Optional[Event]:
-        if self.mode != "pva" or self.state.current_player == self.player_team:
+        if (
+            self.mode != "pva"
+            or self.state.winner is not None
+            or self.state.is_draw
+            or self.state.current_player == self.player_team
+        ):
             return None
         ai_player = 2 if self.player_team == 1 else 1
         self._emit("ai_thinking", player=ai_player, depth=depth)

@@ -26,6 +26,8 @@ export type WSServerEvent =
       turn_count: number;
       winner: 1 | 2 | null;
       winning_line: number[] | null;
+      is_draw?: boolean;
+      draw_reason?: string | null;
     }
   | {
       type: 'move_start';
@@ -53,7 +55,9 @@ export type WSServerEvent =
     }
   | {
       type: 'game_over';
-      winner: 1 | 2;
+      winner: 1 | 2 | null;
+      is_draw?: boolean;
+      draw_reason?: string | null;
       winning_line: number[];
       board: (number | null)[];
     }

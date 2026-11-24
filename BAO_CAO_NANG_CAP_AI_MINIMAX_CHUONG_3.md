@@ -55,6 +55,14 @@ Trong đó:
 * Lưu trữ bộ ba `(value, cached_depth, flag)` trong bảng băm trạng thái kết hợp **Move Ordering** (sắp xếp ưu tiên thử nước thắng và nước điểm cao trước) cùng **Root Alpha-Beta Windowing**.
 * Nhờ vậy, ở `depth = 8`, thuật toán cắt tỉa được hơn **99% nhánh dư thừa**, giảm số nút duyệt trung bình từ `1.668,5` nút xuống chỉ còn **`1.138,2` nút** mỗi lượt đi.
 
+#### (4) Bổ sung Luật "Hòa khi lặp trạng thái 5 lần" (5-Fold Repetition) và "Luật 50 nước đi" (50-Move Rule)
+* **Vấn đề thực tế trên sa bàn vật lý:** Khi cả người chơi và AI (`depth = 8`) đều phòng thủ tối ưu, ván cờ dễ rơi vào thế giằng co (hai bên di chuyển xe qua lại giữa các nút giao an toàn). Nếu không có cơ chế dừng tự động, các xe AGV sẽ chạy lặp vô tận gây hao hụt dung lượng pin Li-Po và làm tích lũy sai số trượt bánh xe (Encoder/Gyro drift).
+* **Giải pháp đã tích hợp trong `pi/morris_game.py`, `pi/backend.py`, `src/network/websocket.ts` và `src/components/VictoryModal.tsx`:**
+  1. **Lưu vết lịch sử trạng thái (`history` / `stateCounts`):** Ngay khi bước vào giai đoạn di chuyển (`phase == "move"`, đủ 6 xe trên bàn), hệ thống ghi nhận khóa trạng thái chuẩn hóa `(board, current_player)` sau mỗi lượt đi.
+  2. **Luật lặp trạng thái 5 lần (`fivefold_repetition`, `MAX_STATE_REPETITIONS = 5`):** Nếu cùng một cấu hình bàn cờ và lượt đi xuất hiện đủ **5 lần**, hệ thống lập tức chuyển trạng thái sang `phase = "game_over"`, gắn cờ `is_draw = True`, `draw_reason = "fivefold_repetition"`, phát sự kiện `game_over` lên giao diện Web và **ngắt toàn bộ lệnh điều phối xe tiếp theo**.
+  3. **Luật 50 nước di chuyển (`fifty_move_rule`, `MAX_MOVE_PHASE_PLIES = 50`):** Nếu giai đoạn di chuyển kéo dài tới **50 lượt** mà không bên nào tạo được hàng 3 quân thẳng hàng, hệ thống tự động xử Hòa và dừng xe an toàn.
+  4. **Tích hợp vào cây tìm kiếm Minimax:** Trạng thái hòa (`state.is_draw == True`) được lượng giá bằng `0 điểm`. Nhờ đó, khi AI đang có ưu thế (`score > 0`), AI sẽ chủ động tránh lặp lại trạng thái lần thứ 5; ngược lại khi đang ở thế yếu (`score < 0`), AI biết tận dụng luật lặp 5 lần để cưỡng bức cầm hòa.
+
 ---
 
 ## 3. BẢNG SỐ LIỆU THỰC NGHIỆM ĐƯA VÀO CHƯƠNG 3 ĐỒ ÁN TỐT NGHIỆP

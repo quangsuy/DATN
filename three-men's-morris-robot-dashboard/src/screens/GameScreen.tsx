@@ -50,6 +50,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const [winner, setWinner] = useState<1 | 2 | null>(null);
   const [winningLine, setWinningLine] = useState<number[] | null>(null);
   const [isDraw, setIsDraw] = useState<boolean>(false);
+  const [drawReason, setDrawReason] = useState<string | null>(null);
   const [showVictoryModal, setShowVictoryModal] = useState<boolean>(false);
 
   // 6 Autonomous Vehicles state
@@ -97,13 +98,21 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         setTurnCount(event.turn_count);
         setWinner(event.winner);
         setWinningLine(event.winning_line);
-        if (event.winner) {
+        setIsDraw(Boolean(event.is_draw));
+        setDrawReason(event.draw_reason ?? null);
+        if (event.winner || event.is_draw) {
           setTimeout(() => setShowVictoryModal(true), 1500);
         } else {
           setShowVictoryModal(false);
         }
         setIsAiThinking(false);
-        setPipelineStatus(event.winner ? 'VÁN CỜ ĐÃ KẾT THÚC' : 'HỆ THỐNG SẴN SÀNG');
+        setPipelineStatus(
+          event.is_draw
+            ? 'VÁN CỜ HÒA - ĐÃ DỪNG ĐIỀU PHỐI XE'
+            : event.winner
+            ? 'VÁN CỜ ĐÃ KẾT THÚC'
+            : 'HỆ THỐNG SẴN SÀNG',
+        );
         // Re-derive robots currentNode from authoritative board so frontend
         // and backend stay in sync even after evasion / restore sequences.
         setRobots((prev) => {
@@ -131,10 +140,19 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         setIsAiThinking(false);
         setActiveMoveStep(null);
         setAnimatedRobotPos(null);
-        setPipelineStatus(`VÁN CỜ KẾT THÚC - ĐỘI ${event.winner === 1 ? 'XANH' : 'CAM'} THẮNG`);
+        if (event.is_draw) {
+          const reasonLabel =
+            event.draw_reason === 'fifty_move_rule' ? 'QUÁ 50 NƯỚC DI CHUYỂN' : 'LẶP TRẠNG THÁI 5 LẦN';
+          setPipelineStatus(`VÁN CỜ HÒA (${reasonLabel}) - ĐÃ DỪNG ĐIỀU PHỐI XE`);
+          wsService.addLog('info', `Tuyên bố HÒA (${reasonLabel}): Tự động dừng điều phối xe để bảo vệ pin và tránh trôi sai số Encoder.`);
+        } else {
+          setPipelineStatus(`VÁN CỜ KẾT THÚC - ĐỘI ${event.winner === 1 ? 'XANH' : 'CAM'} THẮNG`);
+        }
         // Đợi 1500ms (1.5s) cho xe chạy xong animation / chạy đến đích vật lý
         setTimeout(() => {
           setWinner(event.winner);
+          setIsDraw(Boolean(event.is_draw));
+          setDrawReason(event.draw_reason ?? null);
           setPhase('game_over');
           setShowVictoryModal(true);
         }, 1500);
@@ -334,7 +352,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
   // Handle clicking on a Robot Piece
   const handleRobotClick = (robotId: number) => {
-    if (activeMoveStep !== null || isAiThinking || winner !== null) return;
+    if (activeMoveStep !== null || isAiThinking || winner !== null || isDraw) return;
 
     // Check if it's AI's turn in PVA
     if (gameMode === 'pva' && currentPlayer !== humanTeam) return;
@@ -379,7 +397,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
   // Handle clicking on a Board Node
   const handleNodeClick = (nodeId: number) => {
-    if (activeMoveStep !== null || isAiThinking || winner !== null) return;
+    if (activeMoveStep !== null || isAiThinking || winner !== null || isDraw) return;
     if (gameMode === 'pva' && currentPlayer !== humanTeam) return;
 
     // Nếu người chơi click vào một ô đang có xe của chính đội mình -> chọn xe đó
@@ -441,6 +459,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     setWinner(null);
     setWinningLine(null);
     setIsDraw(false);
+    setDrawReason(null);
     setShowVictoryModal(false);
     setSelectedRobotId(null);
     setValidDestinations([]);
@@ -688,10 +707,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       </footer>
 
       {/* Victory / Draw Celebration Modal */}
-      {winner !== null && showVictoryModal && (
+      {(winner !== null || isDraw) && showVictoryModal && (
         <VictoryModal
           winner={winner}
           isDraw={isDraw}
+          drawReason={drawReason}
           gameMode={gameMode}
           onPlayAgain={handleRestart}
           onBackToMenu={onBackToMenu}
@@ -700,7 +720,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       )}
 
       {/* Floating button to re-open victory modal if user dismissed it to inspect board */}
-      {winner !== null && !showVictoryModal && (
+      {(winner !== null || isDraw) && !showVictoryModal && (
         <div className="fixed bottom-6 right-6 z-40 animate-bounce">
           <button
             onClick={() => setShowVictoryModal(true)}

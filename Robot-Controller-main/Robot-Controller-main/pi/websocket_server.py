@@ -56,7 +56,12 @@ class MorrisWebSocketServer:
                 int(action["to_node"] if "to_node" in action else action["to"]),
                 None if action.get("robot_id") is None else int(action["robot_id"]),
             )
-            if self.backend.mode == "pva" and self.backend.state.current_player != self.backend.player_team:
+            if (
+                self.backend.mode == "pva"
+                and self.backend.state.winner is None
+                and not self.backend.state.is_draw
+                and self.backend.state.current_player != self.backend.player_team
+            ):
                 self.backend.ai_move()
             return
         if action_type == "reset_game":
