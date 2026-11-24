@@ -112,6 +112,35 @@ class MinimaxTests(unittest.TestCase):
         d2 = choose_move(state, ai_player=2, max_depth=3)
         self.assertEqual(d1.move, d2.move)
 
+    def test_evaluate_rewards_mobility_and_penalizes_trapped_pieces(self):
+        """Pieces with free adjacent neighbors score higher than trapped pieces."""
+        # AI (2) at node 0 surrounded by opponent pieces at 1, 3, 4 (0 free neighbors)
+        trapped_state = GameState(
+            board=(2, 1, None, 1, 1, None, None, None, None),
+            current_player=2,
+            phase="move",
+        )
+        # AI (2) at node 8 with free neighbors 5 and 7
+        mobile_state = GameState(
+            board=(None, 1, None, 1, 1, None, None, None, 2),
+            current_player=2,
+            phase="move",
+        )
+        self.assertGreater(_evaluate(mobile_state, ai_player=2), _evaluate(trapped_state, ai_player=2))
+
+    def test_depth_8_sees_forced_win_when_opponent_opens_on_edge(self):
+        """At default depth=8, AI immediately identifies forced win when P1 opens on an edge."""
+        state = GameState(
+            board=(None, 1, None, None, None, None, None, None, None),
+            current_player=2,
+            phase="drop",
+            turn_count=2,
+        )
+        decision = choose_move(state, ai_player=2)
+        self.assertEqual(decision.depth, 8)
+        self.assertEqual(decision.move.target_node, 4)
+        self.assertGreaterEqual(decision.score, 1000)
+
 
 if __name__ == "__main__":
     unittest.main()

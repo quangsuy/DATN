@@ -359,18 +359,20 @@ class LocalSimulationEngine {
     const aiPlayer: 1 | 2 = this.playerTeam === 1 ? 2 : 1;
     if (this.currentPlayer !== aiPlayer) return;
 
-    this.emit({ type: 'ai_thinking', player: aiPlayer, depth: 4 });
+    const searchDepth = 8;
+    this.emit({ type: 'ai_thinking', player: aiPlayer, depth: searchDepth });
     const t0 = performance.now();
 
     this.schedule(() => {
-      const decision = this.chooseMinimaxMove(aiPlayer, 4);
+      const decision = this.chooseMinimaxMove(aiPlayer, searchDepth);
       if (!decision) return;
-      const calcMs = Math.max(5, Math.round(performance.now() - t0));
+      const calcMs = Math.max(2, Math.round(performance.now() - t0));
       this.emit({
         type: 'ai_decision',
         robot_id: decision.robotId,
         from: decision.from,
         to: decision.to,
+        depth: searchDepth,
         eval_score: decision.score,
         nodes_searched: decision.nodes,
         calc_ms: calcMs,
@@ -381,10 +383,21 @@ class LocalSimulationEngine {
 
   private chooseMinimaxMove(
     aiPlayer: 1 | 2,
-    maxDepth: number,
+    maxDepth: number = 8,
   ): { robotId: number; from: number | null; to: number; score: number; nodes: number } | null {
     const humanPlayer: 1 | 2 = aiPlayer === 1 ? 2 : 1;
     let nodesSearched = 0;
+
+    // Transposition Table: key -> { score, depth, flag (0=EXACT, 1=LOWER, 2=UPPER) }
+    const tt = new Map<string, { score: number; depth: number; flag: 0 | 1 | 2 }>();
+
+    const boardKey = (b: (number | null)[], p: 1 | 2, placed: Record<1 | 2, number>): string => {
+      let s = '';
+      for (let i = 0; i < 9; i++) {
+        s += b[i] === null ? '0' : String(b[i]);
+      }
+      return `${s}:${p}:${placed[1]}${placed[2]}`;
+    };
 
     const genMoves = (b: (number | null)[], p: 1 | 2, placed: Record<1 | 2, number>) => {
       const moves: { from: number | null; to: number }[] = [];
@@ -406,17 +419,89 @@ class LocalSimulationEngine {
 
     const evaluate = (b: (number | null)[]): number => {
       const w = this.checkWin(b).winner;
-      if (w === aiPlayer) return 100;
-      if (w === humanPlayer) return -100;
-      let score = b[4] === aiPlayer ? 6 : b[4] === humanPlayer ? -6 : 0;
-      for (const [a, c, d] of WINNING_LINES) {
-        const cells = [b[a], b[c], b[d]];
-        const aiCnt = cells.filter((x) => x === aiPlayer).length;
-        const huCnt = cells.filter((x) => x === humanPlayer).length;
-        if (aiCnt === 2 && huCnt === 0) score += 12;
-        if (huCnt === 2 && aiCnt === 0) score -= 14;
+      if (w === aiPlayer) return 1000;
+      if (w === humanPlayer) return -1000;
+
+      let score = 0;
+      // 1. Center node control (node 4 connects all 8 neighbors & 4 winning lines)
+      if (b[4] === aiPlayer) score += 30;
+      else if (b[4] === humanPlayer) score -= 30;
+
+      // 2. Corner node control (0, 2, 6, 8 each have 3 connections & 3 winning lines)
+      for (const corner of [0, 2, 6, 8]) {
+        if (b[corner] === aiPlayer) score += 8;
+        else if (b[corner] === humanPlayer) score -= 8;
       }
+
+      // 3. Mobility (Độ cơ động) & Trapped-piece penalty (Phạt kẹt góc)
+      let aiCount = 0;
+      let huCount = 0;
+      for (let i = 0; i < 9; i++) {
+        const cell = b[i];
+        if (cell === null) continue;
+        let freeEdges = 0;
+        const neighbors = BOARD_NODES[i].connectedNeighbors;
+        for (let k = 0; k < neighbors.length; k++) {
+          if (b[neighbors[k]] === null) freeEdges++;
+        }
+        if (cell === aiPlayer) {
+          aiCount++;
+          score += freeEdges * 5;
+          if (freeEdges === 0) score -= 12;
+        } else {
+          huCount++;
+          score -= freeEdges * 5;
+          if (freeEdges === 0) score += 12;
+        }
+      }
+
+      // 4. Two-in-a-row threats & Double-threat Fork (Thế gọng kìm)
+      let aiThreats = 0;
+      let huThreats = 0;
+      for (const [a, c, d] of WINNING_LINES) {
+        const ca = b[a];
+        const cc = b[c];
+        const cd = b[d];
+        const aiCnt = (ca === aiPlayer ? 1 : 0) + (cc === aiPlayer ? 1 : 0) + (cd === aiPlayer ? 1 : 0);
+        const huCnt = (ca === humanPlayer ? 1 : 0) + (cc === humanPlayer ? 1 : 0) + (cd === humanPlayer ? 1 : 0);
+        if (aiCnt === 2 && huCnt === 0) {
+          score += 60;
+          aiThreats++;
+        }
+        if (huCnt === 2 && aiCnt === 0) {
+          score -= 90;
+          huThreats++;
+        }
+      }
+
+      if (aiThreats >= 2) score += 80;
+      if (huThreats >= 2) score -= 110;
+
+      score += (aiCount - huCount) * 4;
       return score;
+    };
+
+    const orderMoves = (
+      b: (number | null)[],
+      p: 1 | 2,
+      placed: Record<1 | 2, number>,
+      candidates: { from: number | null; to: number }[],
+    ) => {
+      const entries = candidates.map((m) => {
+        const nb = [...b];
+        const np = { ...placed };
+        if (m.from !== null) nb[m.from] = null;
+        else np[p]++;
+        nb[m.to] = p;
+        const w = this.checkWin(nb).winner;
+        let priority: number;
+        if (w === aiPlayer) priority = -2000;
+        else if (w === humanPlayer) priority = 2000;
+        else priority = -evaluate(nb);
+        return { priority, move: m, nb, np, winner: w };
+      });
+      entries.sort((a, bEntry) => (p === aiPlayer ? a.priority - bEntry.priority : bEntry.priority - a.priority));
+      return entries;
     };
 
     const minimax = (
@@ -429,56 +514,71 @@ class LocalSimulationEngine {
     ): number => {
       nodesSearched++;
       const w = this.checkWin(b).winner;
-      if (w === aiPlayer) return 100 + depth;
-      if (w === humanPlayer) return -100 - depth;
+      if (w === aiPlayer) return 1000 + depth;
+      if (w === humanPlayer) return -1000 - depth;
       if (depth === 0) return evaluate(b);
-      const moves = genMoves(b, p, placed);
-      if (moves.length === 0) return 0;
 
-      if (p === aiPlayer) {
-        let best = -9999;
-        for (const m of moves) {
-          const nb = [...b];
-          const np = { ...placed };
-          if (m.from !== null) nb[m.from] = null;
-          else np[p]++;
-          nb[m.to] = p;
-          best = Math.max(best, minimax(nb, humanPlayer, np, depth - 1, alpha, beta));
-          alpha = Math.max(alpha, best);
-          if (beta <= alpha) break;
-        }
-        return best;
-      } else {
-        let best = 9999;
-        for (const m of moves) {
-          const nb = [...b];
-          const np = { ...placed };
-          if (m.from !== null) nb[m.from] = null;
-          else np[p]++;
-          nb[m.to] = p;
-          best = Math.min(best, minimax(nb, aiPlayer, np, depth - 1, alpha, beta));
-          beta = Math.min(beta, best);
-          if (beta <= alpha) break;
-        }
-        return best;
+      const key = boardKey(b, p, placed);
+      const cached = tt.get(key);
+      if (cached && cached.depth >= depth) {
+        if (cached.flag === 0) return cached.score;
+        if (cached.flag === 1 && cached.score > alpha) alpha = cached.score;
+        if (cached.flag === 2 && cached.score < beta) beta = cached.score;
+        if (alpha >= beta) return cached.score;
       }
+
+      const moves = genMoves(b, p, placed);
+      if (moves.length === 0) {
+        const leaf = evaluate(b);
+        tt.set(key, { score: leaf, depth, flag: 0 });
+        return leaf;
+      }
+
+      const alphaOrig = alpha;
+      const betaOrig = beta;
+      const ordered = orderMoves(b, p, placed, moves);
+
+      let best: number;
+      if (p === aiPlayer) {
+        best = -99999;
+        for (const entry of ordered) {
+          const val = minimax(entry.nb, humanPlayer, entry.np, depth - 1, alpha, beta);
+          if (val > best) best = val;
+          if (best > alpha) alpha = best;
+          if (beta <= alpha) break;
+        }
+      } else {
+        best = 99999;
+        for (const entry of ordered) {
+          const val = minimax(entry.nb, aiPlayer, entry.np, depth - 1, alpha, beta);
+          if (val < best) best = val;
+          if (best < beta) beta = best;
+          if (beta <= alpha) break;
+        }
+      }
+
+      const flag: 0 | 1 | 2 = best <= alphaOrig ? 2 : best >= betaOrig ? 1 : 0;
+      tt.set(key, { score: best, depth, flag });
+      return best;
     };
 
     const rootMoves = genMoves(this.board, aiPlayer, this.placedCount);
     if (rootMoves.length === 0) return null;
 
-    let bestMove = rootMoves[0];
+    const orderedRoot = orderMoves(this.board, aiPlayer, this.placedCount, rootMoves);
+    let bestMove = orderedRoot[0].move;
     let bestScore = -99999;
-    for (const m of rootMoves) {
-      const nb = [...this.board];
-      const np = { ...this.placedCount };
-      if (m.from !== null) nb[m.from] = null;
-      else np[aiPlayer]++;
-      nb[m.to] = aiPlayer;
-      const sc = minimax(nb, humanPlayer, np, maxDepth - 1, -99999, 99999);
+    let alpha = -99999;
+    const beta = 99999;
+
+    for (const entry of orderedRoot) {
+      const sc = minimax(entry.nb, humanPlayer, entry.np, maxDepth - 1, alpha, beta);
       if (sc > bestScore) {
         bestScore = sc;
-        bestMove = m;
+        bestMove = entry.move;
+      }
+      if (bestScore > alpha) {
+        alpha = bestScore;
       }
     }
 

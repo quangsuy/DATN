@@ -151,7 +151,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         setPipelineStatus(`AI CHỌN XE #${event.robot_id} -> Ô #${event.to}`);
         setLastMinimaxLog({
           evalScore: event.eval_score,
-          depth: 4,
+          depth: event.depth ?? 8,
           nodesSearched: event.nodes_searched,
           chosenPiece: event.robot_id,
           chosenMove: { from: event.from, to: event.to },

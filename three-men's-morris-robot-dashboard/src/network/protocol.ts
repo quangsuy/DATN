@@ -108,6 +108,7 @@ export type WSServerEvent =
       robot_id: number;
       from: number | null;
       to: number;
+      depth?: number;
       eval_score: number;
       nodes_searched: number;
       calc_ms: number;

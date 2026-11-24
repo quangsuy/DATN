@@ -457,7 +457,7 @@ class MorrisBackend:
             raise IllegalMove("move belongs to the other player")
         return self.execute_move(move)
 
-    def ai_move(self, depth: int = 4) -> Optional[Event]:
+    def ai_move(self, depth: int = 8) -> Optional[Event]:
         if self.mode != "pva" or self.state.current_player == self.player_team:
             return None
         ai_player = 2 if self.player_team == 1 else 1
@@ -473,6 +473,7 @@ class MorrisBackend:
             from_node=decision.move.source_node,
             **{"from": decision.move.source_node},
             to=decision.move.target_node,
+            depth=decision.depth,
             eval_score=decision.score,
             nodes_searched=decision.nodes_searched,
             calc_ms=max(decision.elapsed_ms, int((monotonic() - started) * 1000)),

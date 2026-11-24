@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.7.5)  24 NOV 2026 00:01
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.7.5)  24 NOV 2026 00:26
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1142,17 +1142,9 @@ Underfull \hbox (badness 1609) in paragraph at lines 480--480
 
 LaTeX Warning: `!h' float specifier changed to `!ht'.
 
-[10] [11] [12] [13]
-Ch\uhorn \ohorn ng 3.
-[14
+[10] [11] [12] [13] [14
 
-]
-
-LaTeX Warning: `!h' float specifier changed to `!ht'.
-
-[15] [16] [17
-
-] [18
+] [15
 
 ] (de_cuong_do_an_tot_nghiep_duong_son_quang.aux)
  ***********
@@ -1161,16 +1153,16 @@ L3 programming layer <2025-12-24>
  ***********
 Package rerunfilecheck Info: File `de_cuong_do_an_tot_nghiep_duong_son_quang.ou
 t' has not changed.
-(rerunfilecheck)             Checksum: 8F842CFEBD789C7A2597E30E932BE074;13677.
+(rerunfilecheck)             Checksum: 687929081B77C2D797FA052E412A168F;10511.
  ) 
 Here is how much of TeX's memory you used:
- 13510 strings out of 467871
- 210809 string characters out of 5418377
- 644847 words of memory out of 5000000
- 42079 multiletter control sequences out of 15000+600000
+ 13493 strings out of 467871
+ 210718 string characters out of 5418377
+ 644844 words of memory out of 5000000
+ 42074 multiletter control sequences out of 15000+600000
  691912 words of font info for 136 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 75i,14n,106p,979b,617s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,14n,106p,916b,617s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <C:/Users/Quang/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/
 cmex10.pfb><C:/Users/Quang/AppData/Local/Programs/MiKTeX/fonts/type1/public/ams
 fonts/cm/cmmi10.pfb><C:/Users/Quang/AppData/Local/Programs/MiKTeX/fonts/type1/p
@@ -1185,10 +1177,10 @@ l/Programs/MiKTeX/fonts/type1/vntex/urwvn/utmr8v.pfb><C:/Users/Quang/AppData/Lo
 cal/Programs/MiKTeX/fonts/type1/urw/times/utmri8a.pfb><C:/Users/Quang/AppData/L
 ocal/Programs/MiKTeX/fonts/type1/vntex/urwvn/utmri8v.pfb><C:/Users/Quang/AppDat
 a/Local/Programs/MiKTeX/fonts/type1/vntex/vnr/vntt12.pfb>
-Output written on de_cuong_do_an_tot_nghiep_duong_son_quang.pdf (24 pages, 2758
-49 bytes).
+Output written on de_cuong_do_an_tot_nghiep_duong_son_quang.pdf (21 pages, 2597
+46 bytes).
 PDF statistics:
- 407 PDF objects out of 1000 (max. 8388607)
- 84 named destinations out of 1000 (max. 500000)
- 273 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 360 PDF objects out of 1000 (max. 8388607)
+ 72 named destinations out of 1000 (max. 500000)
+ 233 words of extra memory for PDF output out of 10000 (max. 10000000)
 

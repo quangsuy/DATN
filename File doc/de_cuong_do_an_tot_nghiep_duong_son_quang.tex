@@ -503,41 +503,6 @@
 		\item \textbf{Khả năng di chuyển linh hoạt ngoài đường kẻ:} Nhờ kết hợp định vị odometry (encoder + MPU6050) với mảng cảm biến hồng ngoại TCRT5000L, xe có thể di chuyển trên cả những đoạn không có vạch kẻ (từ bãi đỗ tiến vào bàn cờ hoặc lách tránh xe khác) và tự động hiệu chỉnh lại tâm khi đi dọc các tuyến đường chính trên sa bàn.
 	\end{itemize}
 	
-	\section{Đánh giá nhược điểm và những hạn chế kỹ thuật tồn tại}
-	Qua quá trình phân tích mã nguồn và kiểm thử từng phân hệ, hệ thống hiện vẫn còn một số hạn chế kỹ thuật cần tiếp tục giải quyết:
-	\begin{enumerate}[leftmargin=1.2cm]
-		\item \textbf{Chưa khép kín vòng phản hồi vị trí từ camera xuống xe:} Hiện tại, dịch vụ \texttt{camera\_service.py} mới dừng ở việc nắn phẳng mặt bàn bằng homography sang hệ tọa độ chuẩn hóa $800 \times 800\text{ pixel}$ (\texttt{board\_x}, \texttt{board\_y}) và hiển thị trạng thái nhận diện thẻ ArUco trên giao diện; hệ thống chưa có phép ánh xạ từ tọa độ pixel sang kích thước vật lý thực tế (milimét) của 9 nút cờ để tự động đồng bộ lại vị trí xe vào backend và chưa gửi hiệu chỉnh trực tiếp xuống xe trong lúc di chuyển.
-		\item \textbf{Chưa hiệu chỉnh méo ống kính camera:} Luồng xử lý ảnh hiện mới thực hiện biến đổi phối cảnh 4 điểm góc mà chưa tích hợp bước hiệu chỉnh thông số nội tại và độ méo phi tuyến của ống kính camera USB, có thể gây sai lệch vị trí ở vùng rìa bàn cờ.
-		\item \textbf{Bộ điều khiển trên xe mới dừng ở khâu tỷ lệ (P):} Thuật toán điều khiển động cơ trên xe hiện mới sử dụng hệ số tỷ lệ cho góc quay và giữ hướng mà chưa có vòng điều khiển vận tốc kín (PI) cho từng bánh xe cũng như khâu vi phân (PD) để triệt tiêu quán tính khi dừng góc.
-		\item \textbf{Điều phối tuần tự và chưa kiểm chứng thực nghiệm đồng bộ toàn bộ 6 xe:} Bộ lập kế hoạch hiện điều phối từng xe di chuyển tuần tự thay vì lập lịch đồng thời nhiều xe, đồng thời toàn bộ quy trình vận hành thực tế 6 xe trên sa bàn và đo đạc độ trễ truyền thông ESP-NOW mới hoàn thiện ở mức mã nguồn, cần được kiểm chứng thực nghiệm toàn diện.
-	\end{enumerate}
-	
-	% -------------------------------------------------------------------------
-	% CHƯƠNG 3: GIẢI PHÁP KHẮC PHỤC NHƯỢC ĐIỂM VÀ KẾ HOẠCH HOÀN THIỆN
-	% -------------------------------------------------------------------------
-	\clearpage
-	\chapter{GIẢI PHÁP KHẮC PHỤC NHƯỢC ĐIỂM VÀ KẾ HOẠCH HOÀN THIỆN}
-	
-	\section{Giải pháp khắc phục nhược điểm 1: Hiệu chỉnh méo ống kính và ánh xạ tọa độ pixel sang milimét đồng bộ tự động}
-	Để loại bỏ sai số hình học và khép kín dữ liệu giữa thị giác máy tính với bộ lập kế hoạch quỹ đạo, đề tài đề xuất quy trình nâng cấp mô-đun \texttt{camera\_service.py} và \texttt{backend.py} theo hai bước:
-	\begin{itemize}[leftmargin=1.2cm]
-		\item \textbf{Hiệu chỉnh thông số nội tại camera (Camera Intrinsics Calibration):} Sử dụng bàn cờ hiệu chuẩn chuẩn hóa (Chessboard) để xác định ma trận nội tại $K$ và các hệ số méo ống kính $(k_1, k_2, p_1, p_2)$, lưu trữ thành tệp cấu hình cố định và áp dụng hàm khử méo ảnh trước khi tính toán ma trận đồng ứng homography.
-		\item \textbf{Ánh xạ tuyến tính sang hệ tọa độ milimét và đồng bộ tự động:} Thiết lập ma trận quy đổi từ không gian ảnh nắn phẳng $800 \times 800\text{ pixel}$ sang kích thước vật lý thực tế của sa bàn (tính bằng milimét), từ đó ánh xạ tọa độ tâm của các thẻ ArUco ID $1$--$6$ về đúng chỉ số 9 nút bàn cờ ($0\text{--}8$) và 6 vị trí bãi đỗ. Kết quả này sẽ được gọi tự động qua hàm đồng bộ vị trí (\texttt{resync\_positions}) trước mỗi lượt chơi để đảm bảo trạng thái logic luôn khớp với vị trí vật lý.
-	\end{itemize}
-	
-	\section{Giải pháp khắc phục nhược điểm 2: Tích hợp điều khiển phản hồi vòng kín từ thị giác máy tính và hoàn thiện bộ điều khiển PI/PD trên xe}
-	Nhằm nâng cao độ chính xác dừng tại tâm nút cờ và đảm bảo tính đồng nhất chuyển động giữa cả 6 xe robot, hệ thống sẽ được bổ sung hai cơ chế điều khiển sau:
-	\begin{itemize}[leftmargin=1.2cm]
-		\item \textbf{Nâng cấp bộ điều khiển tốc độ PI và góc hướng PD trên firmware xe:} Bổ sung vòng lặp điều khiển tỷ lệ -- tích phân (PI) ở chu kỳ $10\text{--}20\text{ ms}$ dựa trên xung phản hồi encoder để ép vận tốc thực tế của hai bánh trái/phải bám đúng vận tốc đặt, khắc phục sự sai khác ma sát cơ khí và sụt áp pin giữa các xe. Đồng thời, bổ sung khâu vi phân (PD) sử dụng trực tiếp vận tốc góc $\omega_z$ từ cảm biến MPU6050 để hãm đà quán tính khi xe quay tới gần góc đích.
-		\item \textbf{Cập nhật vị trí hiệu chỉnh từ camera sau mỗi chặng di chuyển:} Sau khi xe hoàn thành một waypoint và gửi tín hiệu xác nhận, Raspberry Pi 3 đối chiếu tọa độ thực tế từ camera ArUco; nếu sai số vị trí vượt ngưỡng cho phép, hệ thống tự động phát gói lệnh đồng bộ lại tọa độ chuẩn $(x, y, \theta)$ xuống xe trước khi thực hiện bước di chuyển kế tiếp.
-	\end{itemize}
-	
-	\section{Giải pháp khắc phục nhược điểm 3: Mở rộng điều phối đa tác tử và kiểm chứng thực nghiệm toàn diện trên sa bàn}
-	Để hoàn thiện giá trị nghiên cứu của bài toán điều phối bầy đàn và khẳng định tính tin cậy của hệ thống trước khi bảo vệ đồ án, các hạng mục thực nghiệm sau sẽ được triển khai:
-	\begin{itemize}[leftmargin=1.2cm]
-		\item \textbf{Nâng cấp thuật toán lập lịch tránh xung đột:} Mở rộng bộ lập kế hoạch quỹ đạo theo hướng kiểm tra giao cắt lộ trình giữa các tác tử, tiến tới thử nghiệm giải thuật lập lịch có xét yếu tố thời gian cho phép nhiều xe di chuyển đồng thời trên các hành lang không giao nhau.
-		\item \textbf{Quy trình đo kiểm và đánh giá thực nghiệm:} Tiến hành đo đạc thực tế trên sa bàn với đầy đủ 6 xe robot qua các kịch bản: đo độ trễ truyền nhận gói tin ESP-NOW và tỷ lệ mất gói trong môi trường có nhiễu Wi-Fi; đánh giá sai số dừng tại 9 nút bàn cờ trước và sau khi bật hiệu chỉnh cảm biến vạch TCRT5000L; kiểm thử liên tục ít nhất 20 ván cờ đối kháng hoàn chỉnh giữa người chơi và AI Minimax.
-	\end{itemize}
 	
 	\section{Kế hoạch triển khai và phân công nhiệm vụ chi tiết}
 	Quá trình thực hiện đồ án được chia thành 6 giai đoạn trong thời gian 14 tuần theo lộ trình trình bày trong Bảng~\ref{tab:ke_hoach_14_tuan}.
