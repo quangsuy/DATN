@@ -77,6 +77,15 @@ class CameraServiceTests(unittest.TestCase):
         finally:
             server.shutdown()
 
+    def test_parse_device_arg_accepts_int_and_http_url(self) -> None:
+        from .camera_service import parse_device_arg
+
+        self.assertEqual(parse_device_arg("0"), 0)
+        self.assertEqual(parse_device_arg(2), 2)
+        self.assertEqual(parse_device_arg("http://192.168.150.1:8085/video"), "http://192.168.150.1:8085/video")
+        self.assertEqual(parse_device_arg("/dev/video0"), "/dev/video0")
+        self.assertIsNone(parse_device_arg(None))
+
 
 if __name__ == "__main__":
     unittest.main()

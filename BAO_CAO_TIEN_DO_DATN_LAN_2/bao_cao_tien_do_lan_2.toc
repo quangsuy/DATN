@@ -1,0 +1,7 @@
+\babel@toc {vietnamese}{}\relax 
+\contentsline {chapter}{1. TÓM TẮT TIẾN ĐỘ}{1}{chapter*.2}%
+\contentsline {chapter}{2. TỔNG QUAN KIẾN TRÚC HỆ THỐNG}{4}{chapter*.3}%
+\contentsline {chapter}{3. ĐỐI CHIẾU KẾ HOẠCH VÀ THỰC TẾ}{6}{chapter*.4}%
+\contentsline {chapter}{4. KẾT QUẢ ĐÃ ĐẠT}{9}{chapter*.5}%
+\contentsline {chapter}{5. KẾ HOẠCH CÔNG VIỆC TIẾP THEO}{19}{chapter*.6}%
+\contentsline {chapter}{6. KHÓ KHĂN ĐÃ GIẢI QUYẾT VÀ ĐỊNH HƯỚNG TỐI ƯU}{20}{chapter*.7}%

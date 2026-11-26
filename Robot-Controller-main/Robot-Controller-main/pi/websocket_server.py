@@ -190,7 +190,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--camera", action="store_true", help="bật MJPEG camera service (cổng --camera-port)")
     parser.add_argument("--camera-port", type=int, default=8080)
-    parser.add_argument("--camera-device", type=int, default=None, help="chỉ số /dev/videoN (mặc định tự dò)")
+    parser.add_argument(
+        "--camera-device",
+        type=lambda v: int(v) if str(v).isdigit() else v,
+        default=None,
+        help="chỉ số /dev/videoN hoặc URL luồng IP Webcam http://... (mặc định tự dò)",
+    )
     parser.add_argument("--serial-device", default="/dev/ttyUSB0", help="serial device for --transport serial")
     return parser.parse_args()
 

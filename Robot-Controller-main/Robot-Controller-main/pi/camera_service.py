@@ -25,7 +25,7 @@ import os
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import cv2
 import numpy as np
@@ -42,11 +42,35 @@ DEFAULT_CALIB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "c
 FrameSource = Callable[[], Optional[np.ndarray]]
 
 
-def find_capture_device(candidates: Optional[Sequence[int]] = None) -> Optional[Tuple[cv2.VideoCapture, str]]:
-    """Mở thiết bị V4L2 đầu tiên thực sự trả về frame."""
-    for index in candidates if candidates is not None else range(0, 8):
-        path = "/dev/video%d" % index
-        cap = cv2.VideoCapture(path, cv2.CAP_V4L2) if os.name != "nt" else cv2.VideoCapture(index)
+def parse_device_arg(value: Optional[object]) -> Optional[Union[int, str]]:
+    """Chuyển đổi tham số --device / --camera-device thành số nguyên hoặc đường dẫn/URL."""
+    if value is None:
+        return None
+    if isinstance(value, int):
+        return value
+    text = str(value).strip()
+    if not text:
+        return None
+    return int(text) if text.isdigit() else text
+
+
+def find_capture_device(
+    candidates: Optional[Sequence[Union[int, str]]] = None,
+) -> Optional[Tuple[cv2.VideoCapture, str]]:
+    """Mở thiết bị V4L2 (/dev/videoN) hoặc luồng IP Webcam (http/https/rtsp) đầu tiên trả về frame."""
+    items: Sequence[Union[int, str]] = candidates if candidates is not None else tuple(range(0, 8))
+    for item in items:
+        if isinstance(item, str) and not item.isdigit():
+            path = item.strip()
+            is_url = path.startswith(("http://", "https://", "rtsp://"))
+            if is_url or os.name == "nt":
+                cap = cv2.VideoCapture(path)
+            else:
+                cap = cv2.VideoCapture(path, cv2.CAP_V4L2)
+        else:
+            index = int(item)
+            path = "/dev/video%d" % index
+            cap = cv2.VideoCapture(path, cv2.CAP_V4L2) if os.name != "nt" else cv2.VideoCapture(index)
         if cap.isOpened():
             ok, frame = cap.read()
             if ok and frame is not None:
@@ -66,7 +90,7 @@ class CameraService:
         stream_fps: int = 15,
         detect_every: int = 3,
         calib_path: str = DEFAULT_CALIB_PATH,
-        device_index: Optional[int] = None,
+        device_index: Optional[Union[int, str]] = None,
     ) -> None:
         self.width, self.height, self.fps = width, height, fps
         self.jpeg_quality = jpeg_quality
@@ -199,10 +223,12 @@ class CameraService:
         if not found:
             return False
         cap, self.device = found
-        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
-        cap.set(cv2.CAP_PROP_FPS, self.fps)
+        is_url = isinstance(self.device, str) and self.device.startswith(("http://", "https://", "rtsp://"))
+        if not is_url:
+            cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
+            cap.set(cv2.CAP_PROP_FPS, self.fps)
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         self._cap = cap
         log.info("Camera mở tại %s", self.device)
@@ -214,7 +240,12 @@ class CameraService:
         if self._cap is None:
             return None
         ok, frame = self._cap.read()
-        return frame if ok else None
+        if not ok or frame is None:
+            return None
+        h, w = frame.shape[:2]
+        if w > self.width or h > self.height:
+            frame = cv2.resize(frame, (self.width, self.height), interpolation=cv2.INTER_AREA)
+        return frame
 
     def _render(self, frame: np.ndarray, corners: list, ids: Optional[np.ndarray]) -> Tuple[bytes, Optional[bytes]]:
         view = frame.copy()
@@ -388,7 +419,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="MJPEG camera + ArUco calibration service")
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8080)
-    parser.add_argument("--device", type=int, default=None, help="chỉ số /dev/videoN (mặc định: tự dò)")
+    parser.add_argument(
+        "--device",
+        type=parse_device_arg,
+        default=None,
+        help="chỉ số /dev/videoN hoặc URL luồng IP Webcam http://... (mặc định: tự dò)",
+    )
     parser.add_argument("--width", type=int, default=640)
     parser.add_argument("--height", type=int, default=480)
     parser.add_argument("--fps", type=int, default=30)
