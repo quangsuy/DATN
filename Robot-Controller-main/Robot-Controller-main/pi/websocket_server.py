@@ -213,7 +213,7 @@ def main() -> None:
 
         from .camera_service import CameraService, serve as serve_camera
 
-        camera = CameraService(device_index=args.camera_device)
+        camera = CameraService(device_index=args.camera_device, allow_three_corner_fallback=True)
         if not camera.calibrated:
             camera.start_calibration()
         camera.start()

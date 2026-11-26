@@ -2,7 +2,7 @@
 
 import unittest
 
-from .minimax import _evaluate, choose_move
+from .minimax import ExperienceMemory, _evaluate, choose_move
 from .morris_game import GameState, Move, apply_move, new_game
 
 
@@ -140,6 +140,69 @@ class MinimaxTests(unittest.TestCase):
         self.assertEqual(decision.depth, 8)
         self.assertEqual(decision.move.target_node, 4)
         self.assertGreaterEqual(decision.score, 1000)
+
+    def test_ai_learns_from_loss_and_avoids_repeating_trapped_line(self):
+        """After losing along a trap line, ExperienceMemory penalizes the losing choice
+        and switches to a different counter-move when facing the same position again."""
+        mem = ExperienceMemory(path=None, auto_load=False)
+        # Human (P1) opens at center (node 4)
+        opening = apply_move(new_game(1), Move(1, None, 4))
+        first_decision = choose_move(opening, ai_player=2, max_depth=4, experience=mem)
+        first_target = first_decision.move.target_node
+
+        # Simulate a full match history where AI's choice at `opening` led to a loss against P1's trap
+        s = new_game(1)
+        history = []
+        trap_sequence = [
+            Move(1, None, 4),
+            Move(2, None, first_target),
+            Move(1, None, 5),
+            Move(2, None, 3),
+            Move(1, None, 6),
+            Move(2, None, 2),
+            Move(1, 5, 8),
+            Move(2, 0, 1),
+            Move(1, 4, 7),
+        ]
+        for mv in trap_sequence:
+            history.append((s.board, mv.player, mv.source_node, mv.target_node))
+            s = apply_move(s, mv)
+
+        self.assertEqual(s.winner, 1)
+        stats = mem.record_game(history, winner=1, ai_player=2)
+        self.assertEqual(stats["losses_learned"], 1)
+
+        # Next game: facing the exact same opening, AI must adapt and NOT repeat `first_target`
+        second_decision = choose_move(opening, ai_player=2, max_depth=4, experience=mem)
+        self.assertTrue(second_decision.used_experience)
+        self.assertNotEqual(second_decision.move.target_node, first_target)
+        # And the new choice must still be a sound strategic corner (not a weak edge)
+        self.assertIn(second_decision.move.target_node, (0, 2, 6, 8))
+
+    def test_ai_learns_proactive_trap_block_and_deepens_search(self):
+        """When AI loses at shallow depth due to a fork setup, learning both boosts
+        search depth and rewards blocking the opponent's trap target node."""
+        mem = ExperienceMemory(path=None, auto_load=False)
+        # Mid-drop state where P1 has {4}, P2 has {0}, P1 drops at {2}, P2 must respond
+        s0 = new_game(1)
+        s1 = apply_move(s0, Move(1, None, 4))
+        s2 = apply_move(s1, Move(2, None, 0))
+        s3 = apply_move(s2, Move(1, None, 1))
+        # Suppose AI previously blundered by playing 8 instead of blocking 7, allowing P1 to win at 7
+        history = [
+            (s0.board, 1, None, 4),
+            (s1.board, 2, None, 0),
+            (s2.board, 1, None, 1),
+            (s3.board, 2, None, 8),
+            (apply_move(s3, Move(2, None, 8)).board, 1, None, 7),
+        ]
+        mem.record_game(history, winner=1, ai_player=2)
+
+        # Next time at s3 (even if requested at max_depth=2), AI deepens search and blocks node 7
+        dec = choose_move(s3, ai_player=2, max_depth=2, experience=mem)
+        self.assertTrue(dec.used_experience)
+        self.assertGreater(dec.depth, 2)
+        self.assertEqual(dec.move.target_node, 7)
 
 
 if __name__ == "__main__":

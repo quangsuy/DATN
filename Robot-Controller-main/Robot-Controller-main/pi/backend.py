@@ -10,8 +10,8 @@ from time import monotonic
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from .board_planner import MotionPath, direct_move_trajectory, plan_node_route, pose_to_node_trajectory, route_to_trajectory
-from .board_model import BOARD_NEIGHBORS, PointMm
-from .minimax import MinimaxDecision, choose_move
+from .board_model import BOARD_NEIGHBORS, Board, PointMm
+from .minimax import DEFAULT_EXPERIENCE, ExperienceMemory, MinimaxDecision, choose_move
 from .morris_game import GameState, IllegalMove, Move, apply_move, new_game
 
 Event = Dict[str, Any]
@@ -83,6 +83,8 @@ class MorrisBackend:
     camera_confidence: float = 0.0
     last_error: Optional[str] = None
     physical_position_valid: bool = True
+    experience: ExperienceMemory = field(default_factory=lambda: DEFAULT_EXPERIENCE)
+    match_history: List[Tuple[Board, int, Optional[int], int]] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if not self.robots:
@@ -137,6 +139,7 @@ class MorrisBackend:
         self.move_id = 0
         self.moving_robot_id = None
         self.last_error = None
+        self.match_history.clear()
         for robot in self.robots.values():
             robot.status = "idle"
             robot.current_node = None
@@ -395,6 +398,7 @@ class MorrisBackend:
                     speed_mm_s=MOTION_SPEED_MM_S,
                 )
             self._execute_motion(robot, path, move.target_node)
+            self.match_history.append((self.state.board, move.player, move.source_node, move.target_node))
             self.state = next_state
         except Exception:
             if evasion_stack and not isinstance(self.transport, SimulationTransport):
@@ -434,6 +438,13 @@ class MorrisBackend:
             board=list(self.state.board),
         )
         if self.state.winner is not None or self.state.is_draw:
+            ai_learned = False
+            losses_learned = self.experience.losses_learned
+            if self.mode == "pva" and self.state.winner is not None:
+                ai_player = 2 if self.player_team == 1 else 1
+                stats = self.experience.record_game(self.match_history, self.state.winner, ai_player)
+                ai_learned = self.state.winner != ai_player
+                losses_learned = stats["losses_learned"]
             self._emit(
                 "game_over",
                 winner=self.state.winner,
@@ -441,6 +452,8 @@ class MorrisBackend:
                 draw_reason=self.state.draw_reason,
                 winning_line=list(self.state.winning_line or ()),
                 board=list(self.state.board),
+                ai_learned=ai_learned,
+                losses_learned=losses_learned,
             )
         self.snapshot()
         return event
@@ -472,7 +485,12 @@ class MorrisBackend:
         ai_player = 2 if self.player_team == 1 else 1
         self._emit("ai_thinking", player=ai_player, depth=depth)
         started = monotonic()
-        decision: MinimaxDecision = choose_move(self.state, ai_player=ai_player, max_depth=depth)
+        decision: MinimaxDecision = choose_move(
+            self.state,
+            ai_player=ai_player,
+            max_depth=depth,
+            experience=self.experience,
+        )
         if decision.move is None:
             return None
         robot = self.robot_for_move(decision.move)
@@ -486,6 +504,8 @@ class MorrisBackend:
             eval_score=decision.score,
             nodes_searched=decision.nodes_searched,
             calc_ms=max(decision.elapsed_ms, int((monotonic() - started) * 1000)),
+            used_experience=decision.used_experience,
+            losses_learned=self.experience.losses_learned,
         )
         return self.execute_move(Move(ai_player, decision.move.source_node, decision.move.target_node, robot.robot_id))
 

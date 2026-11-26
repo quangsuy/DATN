@@ -75,6 +75,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const [lastAStarLog, setLastAStarLog] = useState<AStarLog | null>(null);
   const [lastMinimaxLog, setLastMinimaxLog] = useState<MinimaxLog | null>(null);
   const [pipelineStatus, setPipelineStatus] = useState<string>('Hệ thống sẵn sàng');
+  const [aiLessonsLearned, setAiLessonsLearned] = useState<number>(0);
+  const [aiUsedExperience, setAiUsedExperience] = useState<boolean>(false);
 
   const animationTimerRef = useRef<any>(null);
   const robotsRef = useRef<RobotInfo[]>(robots);
@@ -146,7 +148,20 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           setPipelineStatus(`VÁN CỜ HÒA (${reasonLabel}) - ĐÃ DỪNG ĐIỀU PHỐI XE`);
           wsService.addLog('info', `Tuyên bố HÒA (${reasonLabel}): Tự động dừng điều phối xe để bảo vệ pin và tránh trôi sai số Encoder.`);
         } else {
-          setPipelineStatus(`VÁN CỜ KẾT THÚC - ĐỘI ${event.winner === 1 ? 'XANH' : 'CAM'} THẮNG`);
+          if (typeof event.losses_learned === 'number') {
+            setAiLessonsLearned(event.losses_learned);
+          }
+          if (event.ai_learned) {
+            setPipelineStatus(
+              `ĐỘI ${event.winner === 1 ? 'XANH' : 'CAM'} THẮNG — 🧠 AI ĐÃ RÚT KINH NGHIỆM (BÀI HỌC #${event.losses_learned ?? 1})`,
+            );
+            wsService.addLog(
+              'info',
+              `🧠 AI Rút kinh nghiệm sau ván thua: Đã phạt ngược chuỗi nước đi bị sập bẫy và ghi nhớ vào Bộ nhớ Kinh nghiệm (#${event.losses_learned ?? 1}) để ván sau khắc phục!`,
+            );
+          } else {
+            setPipelineStatus(`VÁN CỜ KẾT THÚC - ĐỘI ${event.winner === 1 ? 'XANH' : 'CAM'} THẮNG`);
+          }
         }
         // Đợi 1500ms (1.5s) cho xe chạy xong animation / chạy đến đích vật lý
         setTimeout(() => {
@@ -166,7 +181,16 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
       if (event.type === 'ai_decision') {
         setIsAiThinking(false);
-        setPipelineStatus(`AI CHỌN XE #${event.robot_id} -> Ô #${event.to}`);
+        const usedExp = Boolean(event.used_experience);
+        setAiUsedExperience(usedExp);
+        if (typeof event.losses_learned === 'number') {
+          setAiLessonsLearned(event.losses_learned);
+        }
+        setPipelineStatus(
+          usedExp
+            ? `🛡️ AI ÁP DỤNG KINH NGHIỆM PHÁ BẪY: XE #${event.robot_id} -> Ô #${event.to}`
+            : `AI CHỌN XE #${event.robot_id} -> Ô #${event.to}`,
+        );
         setLastMinimaxLog({
           evalScore: event.eval_score,
           depth: event.depth ?? 8,
@@ -594,6 +618,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 {activeMoveStep && (
                   <span className="px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black">
                     ROBOT #{activeMoveStep.robotId}
+                  </span>
+                )}
+                {gameMode === 'pva' && aiLessonsLearned > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-400/50 text-purple-300 text-[10px] font-bold">
+                    🧠 AI Đã học: {aiLessonsLearned} thế bẫy{aiUsedExperience ? ' • Đang khắc phục' : ''}
                   </span>
                 )}
               </div>

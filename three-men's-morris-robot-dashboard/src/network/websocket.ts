@@ -39,6 +39,165 @@ const BAY_COORDS_MM: Record<number, { x: number; y: number }> = {
 
 const BAY_ENTRY_NODES: Record<number, number> = { 1: 0, 2: 3, 3: 6, 4: 2, 5: 5, 6: 8 };
 
+const SYMMETRIES: number[][] = [
+  [0, 1, 2, 3, 4, 5, 6, 7, 8], // 0 deg
+  [6, 3, 0, 7, 4, 1, 8, 5, 2], // 90 deg CW
+  [8, 7, 6, 5, 4, 3, 2, 1, 0], // 180 deg
+  [2, 5, 8, 1, 4, 7, 0, 3, 6], // 270 deg CW
+  [2, 1, 0, 5, 4, 3, 8, 7, 6], // Flip H
+  [6, 7, 8, 3, 4, 5, 0, 1, 2], // Flip V
+  [0, 3, 6, 1, 4, 7, 2, 5, 8], // Flip Main Diag
+  [8, 5, 2, 7, 4, 1, 6, 3, 0], // Flip Anti Diag
+];
+
+interface HistoryStep {
+  boardBefore: (number | null)[];
+  player: 1 | 2;
+  from: number | null;
+  to: number;
+}
+
+class AiExperienceMemory {
+  private static STORAGE_KEY = 'morris_ai_experience_v1';
+  public moveScores: Record<string, number> = {};
+  public trapTargets: Record<string, Record<string, number>> = {};
+  public dangerStates: Record<string, number> = {};
+  public gamesLearned: number = 0;
+  public lossesLearned: number = 0;
+
+  constructor() {
+    this.load();
+  }
+
+  private boardStr(b: (number | null)[]): string {
+    return b.map((c) => (c === null ? '0' : String(c))).join('');
+  }
+
+  private moveStr(from: number | null, to: number): string {
+    return `${from === null ? 'd' : from}->${to}`;
+  }
+
+  private transformBoard(b: (number | null)[], perm: number[]): (number | null)[] {
+    const out: (number | null)[] = Array(9).fill(null);
+    for (let i = 0; i < 9; i++) {
+      out[perm[i]] = b[i];
+    }
+    return out;
+  }
+
+  public load() {
+    try {
+      const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(AiExperienceMemory.STORAGE_KEY) : null;
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      this.moveScores = data.moveScores || {};
+      this.trapTargets = data.trapTargets || {};
+      this.dangerStates = data.dangerStates || {};
+      this.gamesLearned = Number(data.gamesLearned || 0);
+      this.lossesLearned = Number(data.lossesLearned || 0);
+    } catch {
+      // Ignore storage errors
+    }
+  }
+
+  public save() {
+    try {
+      if (typeof localStorage === 'undefined') return;
+      localStorage.setItem(
+        AiExperienceMemory.STORAGE_KEY,
+        JSON.stringify({
+          gamesLearned: this.gamesLearned,
+          lossesLearned: this.lossesLearned,
+          moveScores: this.moveScores,
+          trapTargets: this.trapTargets,
+          dangerStates: this.dangerStates,
+        }),
+      );
+    } catch {
+      // Ignore storage errors
+    }
+  }
+
+  public hasDangerState(b: (number | null)[], player: 1 | 2): boolean {
+    const key = `${this.boardStr(b)}:${player}`;
+    return (this.dangerStates[key] ?? 0) > 0;
+  }
+
+  public getMoveBias(b: (number | null)[], player: 1 | 2, from: number | null, to: number): number {
+    const stateKey = `${this.boardStr(b)}:${player}`;
+    const moveKey = `${stateKey}:${this.moveStr(from, to)}`;
+    let bias = this.moveScores[moveKey] ?? 0;
+    const traps = this.trapTargets[stateKey];
+    if (traps && traps[String(to)]) {
+      bias += traps[String(to)];
+    }
+    return Math.max(-380, Math.min(260, bias));
+  }
+
+  public recordGame(history: HistoryStep[], winner: 1 | 2 | null, aiPlayer: 1 | 2) {
+    if (!history.length || winner === null) return;
+    const humanPlayer: 1 | 2 = aiPlayer === 1 ? 2 : 1;
+    this.gamesLearned += 1;
+
+    if (winner === humanPlayer) {
+      this.lossesLearned += 1;
+      const aiIndices: number[] = [];
+      history.forEach((step, idx) => {
+        if (step.player === aiPlayer) aiIndices.push(idx);
+      });
+
+      for (let rankFromEnd = 0; rankFromEnd < aiIndices.length; rankFromEnd++) {
+        const idx = aiIndices[aiIndices.length - 1 - rankFromEnd];
+        const step = history[idx];
+        const decay = Math.pow(0.72, rankFromEnd);
+        const penalty = -Math.max(35, Math.round(220 * decay));
+        const trapBonus = Math.max(25, Math.round(135 * decay));
+
+        let oppTarget: number | null = null;
+        if (idx + 1 < history.length && history[idx + 1].player === humanPlayer) {
+          oppTarget = history[idx + 1].to;
+        }
+
+        const piecesCount = step.boardBefore.filter((c) => c !== null).length;
+        const syms = piecesCount <= 1 ? [SYMMETRIES[0]] : SYMMETRIES;
+
+        syms.forEach((perm, symIdx) => {
+          const symBoard = this.transformBoard(step.boardBefore, perm);
+          const symFrom = step.from === null ? null : perm[step.from];
+          const symTo = perm[step.to];
+          const sKey = `${this.boardStr(symBoard)}:${aiPlayer}`;
+          const mKey = `${sKey}:${this.moveStr(symFrom, symTo)}`;
+          const w = symIdx === 0 ? penalty : Math.trunc((penalty * 2) / 3);
+          this.moveScores[mKey] = Math.max(-380, (this.moveScores[mKey] ?? 0) + w);
+          this.dangerStates[sKey] = (this.dangerStates[sKey] ?? 0) + 1;
+
+          if (oppTarget !== null && piecesCount >= 2) {
+            const symOppTarget = String(perm[oppTarget]);
+            if (!this.trapTargets[sKey]) this.trapTargets[sKey] = {};
+            const bw = symIdx === 0 ? trapBonus : Math.trunc((trapBonus * 2) / 3);
+            this.trapTargets[sKey][symOppTarget] = Math.min(220, (this.trapTargets[sKey][symOppTarget] ?? 0) + bw);
+          }
+        });
+      }
+    } else if (winner === aiPlayer) {
+      const aiIndices: number[] = [];
+      history.forEach((step, idx) => {
+        if (step.player === aiPlayer) aiIndices.push(idx);
+      });
+      for (let rankFromEnd = 0; rankFromEnd < aiIndices.length; rankFromEnd++) {
+        const idx = aiIndices[aiIndices.length - 1 - rankFromEnd];
+        const step = history[idx];
+        const reward = Math.max(10, Math.round(45 * Math.pow(0.7, rankFromEnd)));
+        const sKey = `${this.boardStr(step.boardBefore)}:${aiPlayer}`;
+        const mKey = `${sKey}:${this.moveStr(step.from, step.to)}`;
+        this.moveScores[mKey] = Math.min(220, (this.moveScores[mKey] ?? 0) + reward);
+      }
+    }
+
+    this.save();
+  }
+}
+
 class LocalSimulationEngine {
   public mode: GameMode = 'pva';
   public playerTeam: 1 | 2 = 1;
@@ -54,6 +213,8 @@ class LocalSimulationEngine {
   public drawReason: string | null = null;
   public movePhaseCount: number = 0;
   private stateCounts: Map<string, number> = new Map();
+  private matchHistory: HistoryStep[] = [];
+  public experience: AiExperienceMemory = new AiExperienceMemory();
   public robotNodes: Record<number, number | null> = { 1: null, 2: null, 3: null, 4: null, 5: null, 6: null };
   private busy: boolean = false;
   private timers: any[] = [];
@@ -91,6 +252,7 @@ class LocalSimulationEngine {
     this.drawReason = null;
     this.movePhaseCount = 0;
     this.stateCounts.clear();
+    this.matchHistory = [];
     this.robotNodes = { 1: null, 2: null, 3: null, 4: null, 5: null, 6: null };
     this.emit({ type: 'reset_game' });
     for (let id = 1; id <= 6; id++) {
@@ -300,6 +462,7 @@ class LocalSimulationEngine {
 
     // 4. Commit logical board state
     this.schedule(() => {
+      const boardBefore = [...this.board];
       const wasMovePhase = fromNode !== null;
       if (fromNode !== null) {
         this.board[fromNode] = null;
@@ -308,6 +471,7 @@ class LocalSimulationEngine {
       }
       this.board[toNode] = player;
       this.robotNodes[robotId] = toNode;
+      this.matchHistory.push({ boardBefore, player, from: fromNode, to: toNode });
       this.turnCount += 1;
       if (this.placedCount[1] >= 3 && this.placedCount[2] >= 3) {
         this.phase = 'move';
@@ -348,6 +512,12 @@ class LocalSimulationEngine {
       });
 
       if (this.winner || this.isDraw) {
+        const aiPlayer: 1 | 2 = this.playerTeam === 1 ? 2 : 1;
+        let aiLearned = false;
+        if (this.mode === 'pva' && this.winner !== null) {
+          this.experience.recordGame(this.matchHistory, this.winner, aiPlayer);
+          aiLearned = this.winner !== aiPlayer;
+        }
         this.emit({
           type: 'game_over',
           winner: this.winner,
@@ -355,6 +525,8 @@ class LocalSimulationEngine {
           draw_reason: this.drawReason,
           winning_line: this.winningLine || [],
           board: [...this.board],
+          ai_learned: aiLearned,
+          losses_learned: this.experience.lossesLearned,
         });
       }
       this.snapshot();
@@ -393,7 +565,8 @@ class LocalSimulationEngine {
     const aiPlayer: 1 | 2 = this.playerTeam === 1 ? 2 : 1;
     if (this.currentPlayer !== aiPlayer) return;
 
-    const searchDepth = 8;
+    const isKnownTrap = this.experience.hasDangerState(this.board, aiPlayer);
+    const searchDepth = isKnownTrap ? 10 : 8;
     this.emit({ type: 'ai_thinking', player: aiPlayer, depth: searchDepth });
     const t0 = performance.now();
 
@@ -406,10 +579,12 @@ class LocalSimulationEngine {
         robot_id: decision.robotId,
         from: decision.from,
         to: decision.to,
-        depth: searchDepth,
+        depth: decision.depth,
         eval_score: decision.score,
         nodes_searched: decision.nodes,
         calc_ms: calcMs,
+        used_experience: decision.usedExperience,
+        losses_learned: this.experience.lossesLearned,
       });
       this.executeMove(aiPlayer, decision.robotId, decision.from, decision.to);
     }, 350);
@@ -418,9 +593,19 @@ class LocalSimulationEngine {
   private chooseMinimaxMove(
     aiPlayer: 1 | 2,
     maxDepth: number = 8,
-  ): { robotId: number; from: number | null; to: number; score: number; nodes: number } | null {
+  ): {
+    robotId: number;
+    from: number | null;
+    to: number;
+    score: number;
+    nodes: number;
+    depth: number;
+    usedExperience: boolean;
+  } | null {
     const humanPlayer: 1 | 2 = aiPlayer === 1 ? 2 : 1;
     let nodesSearched = 0;
+    let usedExperience = this.experience.hasDangerState(this.board, aiPlayer);
+    const effectiveDepth = usedExperience ? Math.max(maxDepth, 10) : maxDepth;
 
     // Transposition Table: key -> { score, depth, flag (0=EXACT, 1=LOWER, 2=UPPER) }
     const tt = new Map<string, { score: number; depth: number; flag: 0 | 1 | 2 }>();
@@ -528,10 +713,11 @@ class LocalSimulationEngine {
         else np[p]++;
         nb[m.to] = p;
         const w = this.checkWin(nb).winner;
+        const expBias = p === aiPlayer ? this.experience.getMoveBias(b, p, m.from, m.to) : 0;
         let priority: number;
-        if (w === aiPlayer) priority = -2000;
-        else if (w === humanPlayer) priority = 2000;
-        else priority = -evaluate(nb);
+        if (w === aiPlayer) priority = -20000;
+        else if (w === humanPlayer) priority = 20000;
+        else priority = -(evaluate(nb) + expBias);
         return { priority, move: m, nb, np, winner: w };
       });
       entries.sort((a, bEntry) => (p === aiPlayer ? a.priority - bEntry.priority : bEntry.priority - a.priority));
@@ -548,8 +734,8 @@ class LocalSimulationEngine {
     ): number => {
       nodesSearched++;
       const w = this.checkWin(b).winner;
-      if (w === aiPlayer) return 1000 + depth;
-      if (w === humanPlayer) return -1000 - depth;
+      if (w === aiPlayer) return 1000 + depth * 500;
+      if (w === humanPlayer) return -1000 - depth * 500;
       if (depth === 0) return evaluate(b);
 
       const key = boardKey(b, p, placed);
@@ -574,7 +760,7 @@ class LocalSimulationEngine {
 
       let best: number;
       if (p === aiPlayer) {
-        best = -99999;
+        best = -999999;
         for (const entry of ordered) {
           const val = minimax(entry.nb, humanPlayer, entry.np, depth - 1, alpha, beta);
           if (val > best) best = val;
@@ -582,7 +768,7 @@ class LocalSimulationEngine {
           if (beta <= alpha) break;
         }
       } else {
-        best = 99999;
+        best = 999999;
         for (const entry of ordered) {
           const val = minimax(entry.nb, aiPlayer, entry.np, depth - 1, alpha, beta);
           if (val < best) best = val;
@@ -601,23 +787,22 @@ class LocalSimulationEngine {
 
     const orderedRoot = orderMoves(this.board, aiPlayer, this.placedCount, rootMoves);
     let bestMove = orderedRoot[0].move;
-    let bestScore = -99999;
-    let alpha = -99999;
-    const beta = 99999;
+    let bestScore = -999999;
 
     for (const entry of orderedRoot) {
       const nextKey = this.canonicalStateKey(entry.nb, humanPlayer);
       const nextRep = (this.stateCounts.get(nextKey) ?? 0) + 1;
-      const sc =
+      const baseScore =
         entry.np[1] >= 3 && entry.np[2] >= 3 && nextRep >= 5
           ? 0
-          : minimax(entry.nb, humanPlayer, entry.np, maxDepth - 1, alpha, beta);
+          : minimax(entry.nb, humanPlayer, entry.np, effectiveDepth - 1, -999999, 999999);
+      const expBias = this.experience.getMoveBias(this.board, aiPlayer, entry.move.from, entry.move.to);
+      if (expBias !== 0) usedExperience = true;
+      const tieBreak = Math.abs(baseScore) >= 1000 ? Math.trunc(evaluate(entry.nb) / 4) : 0;
+      const sc = baseScore + expBias + tieBreak;
       if (sc > bestScore) {
         bestScore = sc;
         bestMove = entry.move;
-      }
-      if (bestScore > alpha) {
-        alpha = bestScore;
       }
     }
 
@@ -636,6 +821,8 @@ class LocalSimulationEngine {
       to: bestMove.to,
       score: bestScore,
       nodes: nodesSearched,
+      depth: effectiveDepth,
+      usedExperience,
     };
   }
 }

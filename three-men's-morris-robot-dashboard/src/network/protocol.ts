@@ -60,6 +60,8 @@ export type WSServerEvent =
       draw_reason?: string | null;
       winning_line: number[];
       board: (number | null)[];
+      ai_learned?: boolean;
+      losses_learned?: number;
     }
   | {
       type: 'evasion_step';
@@ -116,6 +118,8 @@ export type WSServerEvent =
       eval_score: number;
       nodes_searched: number;
       calc_ms: number;
+      used_experience?: boolean;
+      losses_learned?: number;
     }
   | {
       type: 'astar_result';
