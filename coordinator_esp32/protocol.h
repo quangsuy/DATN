@@ -57,9 +57,11 @@ typedef struct {
 } LedCmd;
 
 // ----- Parsed PING command (Pi -> Coordinator) ---------------
+// robot_id = 0 : diem danh dong loat ca 6 xe (tra ve online_ids & missing_ids)
+// robot_id = 1..6 : ping don le 1 xe
 typedef struct {
     uint16_t seq;
-    uint8_t  robot_id;      // 1-6
+    uint8_t  robot_id;      // 0..6
 } PingCmd;
 
 // ----- Generic incoming command union ------------------------

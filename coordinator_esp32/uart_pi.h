@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "protocol.h"
+#include "robot_registry.h"
 
 // Chan UART toi Pi (qua USB-TTL).
 // ESP32-CAM: GPIO16/17 la chan PSRAM -> KHONG dung. Dung GPIO13 (RX) / GPIO14 (TX): khong phai
@@ -40,12 +41,16 @@ void uart_pi_write_response(const PiResponse *resp);
 // Build and enqueue an ACK response for a given sequence number.
 void uart_pi_send_ack(uint16_t seq, const char *status_str);
 
-// Build and enqueue a robot_status event to Pi.
+// Build and enqueue an ACK response containing full roster details (online_ids & missing_ids).
+void uart_pi_send_ping_ack(uint16_t seq, const char *status_str,
+                           uint8_t target_robot_id, const RosterSummary *roster);
+
+// Build and enqueue a robot_status event to Pi (with battery & RSSI).
 void uart_pi_send_robot_status(uint8_t robot_id, const char *status_str,
-                               const char *position, uint8_t battery);
+                               const char *position, uint8_t battery, int8_t rssi_dbm = 0);
 
 // Build and enqueue a fault event to Pi.
 void uart_pi_send_fault(const char *message, int robot_id);  // robot_id=-1 if system
 
-// Build and enqueue a system_info / telemetry event to Pi.
-void uart_pi_send_system_info(uint8_t active_peers, uint32_t free_heap);
+// Build and enqueue a system_info / telemetry event to Pi (with online_ids & missing_ids).
+void uart_pi_send_system_info(const RosterSummary *roster, uint32_t free_heap);

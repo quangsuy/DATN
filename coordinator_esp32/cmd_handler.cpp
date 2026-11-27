@@ -31,9 +31,10 @@ static void handle_waypoint(const WaypointCmd *wp) {
     pkt.heading_mrad = wp->heading_mrad;
     pkt.speed        = wp->speed;
 
-    // Clear previous ACK bit for this robot
-    EventBits_t bit = (1 << (rid - 1));
-    xEventGroupClearBits(xRobotAckEvent, bit);
+    // Clear previous ACK and ERR bits for this robot
+    EventBits_t ack_bit = ROBOT_ACK_BIT(rid);
+    EventBits_t err_bit = ROBOT_ERR_BIT(rid);
+    xEventGroupClearBits(xRobotAckEvent, ack_bit | err_bit);
 
     // Send to robot via ESP-NOW
     bool sent = espnow_send_waypoint(&pkt, rid);
@@ -48,16 +49,28 @@ static void handle_waypoint(const WaypointCmd *wp) {
                   rid, wp->move_id, wp->wp_index, wp->wp_count,
                   wp->x_mm, wp->y_mm, wp->speed);
 
-    // Wait for robot to report REACHED or ARRIVED
+    // Wait for robot to report REACHED/ARRIVED (ack_bit) OR immediate ERROR (err_bit)
     EventBits_t result = xEventGroupWaitBits(
         xRobotAckEvent,
-        bit,
+        ack_bit | err_bit,
         pdTRUE,           // clear on exit
-        pdFALSE,
+        pdFALSE,          // unblock on EITHER ack_bit OR err_bit
         pdMS_TO_TICKS(ROBOT_ACK_TIMEOUT_MS)
     );
 
-    if (result & bit) {
+    if (result & err_bit) {
+        RobotInfo *ri = robot_registry_get(rid);
+        uint8_t err_code = ri ? ri->last_error_code : 0;
+        char msg[64];
+        snprintf(msg, sizeof(msg), "robot_%d_waypoint_%d_error_code_%u",
+                 rid, wp->wp_index, (unsigned)err_code);
+        uart_pi_send_fault(msg, rid);
+        uart_pi_send_ack(wp->seq, "error");
+        Serial.printf("[CMD] ERROR robot %d wp %d code=%u\n", rid, wp->wp_index, (unsigned)err_code);
+        return;
+    }
+
+    if (result & ack_bit) {
         // Robot acknowledged; determine status string
         bool is_last = (wp->wp_index == wp->wp_count - 1);
         const char *ack_status = is_last ? ACK_COMPLETED : ACK_REACHED;
@@ -70,13 +83,14 @@ static void handle_waypoint(const WaypointCmd *wp) {
             snprintf(pos, sizeof(pos), "%d", ri->last_wp_index);
             uart_pi_send_robot_status(rid,
                 is_last ? "arrived" : "moving",
-                pos, ri->battery_pct);
+                pos, ri->battery_pct, ri->rssi_dbm);
         }
     } else {
-        // Timeout
+        // Timeout -> mark robot offline if unreachable
         char msg[64];
         snprintf(msg, sizeof(msg), "robot %d wp %d timeout", rid, wp->wp_index);
         uart_pi_send_fault(msg, rid);
+        uart_pi_send_ack(wp->seq, "timeout");
         Serial.printf("[CMD] TIMEOUT robot %d wp %d\n", rid, wp->wp_index);
     }
 }
@@ -123,10 +137,42 @@ static void handle_set_led(const LedCmd *lc) {
     }
 }
 
-// ─── Handle PING command (pre-flight check) ──────────────────
+// ─── Handle PING command (single robot 1..6 OR full roster 0) ─
 static void handle_ping(const PingCmd *pc) {
     uint8_t rid = pc->robot_id;
-    EventBits_t bit = (1 << (rid - 1));
+
+    // rid == 0: Diem danh dong loat ca 6 xe trong 1 cua so 400ms
+    if (rid == 0) {
+        xEventGroupClearBits(xRobotAckEvent, ROBOT_ALL_ACK_BITS);
+        for (uint8_t i = 1; i <= MAX_ROBOTS; i++) {
+            espnow_ping(i);
+        }
+        EventBits_t bits = xEventGroupWaitBits(
+            xRobotAckEvent,
+            ROBOT_ALL_ACK_BITS,
+            pdTRUE,
+            pdTRUE,           // cho tat ca 6 bit hoac het 400ms
+            pdMS_TO_TICKS(400)
+        );
+        // Cap nhat trang thai offline cho xe khong phan hoi PONG trong dot diem danh
+        for (uint8_t i = 1; i <= MAX_ROBOTS; i++) {
+            if (!(bits & ROBOT_ACK_BIT(i))) {
+                RobotInfo *ri = robot_registry_get(i);
+                if (ri && (uint32_t)(millis() - ri->last_seen_ms) > 1500) {
+                    robot_registry_mark_offline(i);
+                }
+            }
+        }
+        RosterSummary roster;
+        robot_registry_get_roster(&roster);
+        Serial.printf("[PING] Roster roll-call: %u/%u online, %u missing\n",
+                      roster.active_count, (unsigned)MAX_ROBOTS, roster.missing_len);
+        uart_pi_send_ping_ack(pc->seq, ACK_COMPLETED, 0, &roster);
+        return;
+    }
+
+    // rid == 1..6: Ping don le 1 xe
+    EventBits_t bit = ROBOT_ACK_BIT(rid);
     xEventGroupClearBits(xRobotAckEvent, bit);
     espnow_ping(rid);
     EventBits_t result = xEventGroupWaitBits(
@@ -136,10 +182,15 @@ static void handle_ping(const PingCmd *pc) {
         pdFALSE,
         pdMS_TO_TICKS(400)
     );
+    if (!(result & bit)) {
+        robot_registry_mark_offline(rid);
+    }
+    RosterSummary roster;
+    robot_registry_get_roster(&roster);
     if (result & bit) {
-        uart_pi_send_ack(pc->seq, ACK_COMPLETED);
+        uart_pi_send_ping_ack(pc->seq, ACK_COMPLETED, rid, &roster);
     } else {
-        uart_pi_send_ack(pc->seq, "timeout");
+        uart_pi_send_ping_ack(pc->seq, "timeout", rid, &roster);
     }
 }
 

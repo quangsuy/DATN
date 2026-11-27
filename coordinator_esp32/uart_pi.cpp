@@ -115,8 +115,9 @@ bool uart_pi_parse(const char *buf, uint16_t len, PiCommand *out_cmd) {
         out_cmd->type = CMD_PING;
         PingCmd &pc   = out_cmd->ping;
         pc.seq        = seq;
-        int rid       = payload["robot_id"] | 0;
-        if (rid < 1 || rid > 6) return false;
+        int rid       = payload.containsKey("robot_id") ? (int)payload["robot_id"] : 0;
+        // rid == 0: diem danh toan bo 6 xe; rid == 1..6: ping le 1 xe
+        if (rid < 0 || rid > MAX_ROBOTS) return false;
         pc.robot_id   = (uint8_t)rid;
         return true;
     }
@@ -151,9 +152,34 @@ void uart_pi_send_ack(uint16_t seq, const char *status_str) {
     _enqueue_json(doc);
 }
 
+// ─── PING / Roster ACK (includes online_ids & missing_ids) ───
+void uart_pi_send_ping_ack(uint16_t seq, const char *status_str,
+                           uint8_t target_robot_id, const RosterSummary *roster) {
+    StaticJsonDocument<PROTO_MAX_BYTES> doc;
+    doc["version"] = PROTO_VERSION;
+    doc["seq"]     = seq;
+    doc["type"]    = MSG_ACK;
+    JsonObject payload = doc.createNestedObject("payload");
+    payload["status"]       = status_str;
+    payload["robot_id"]     = target_robot_id;
+    payload["total_robots"] = MAX_ROBOTS;
+    if (roster) {
+        payload["active_peers"] = roster->active_count;
+        JsonArray online_arr = payload.createNestedArray("online_ids");
+        for (uint8_t i = 0; i < roster->online_len; i++) {
+            online_arr.add(roster->online_ids[i]);
+        }
+        JsonArray missing_arr = payload.createNestedArray("missing_ids");
+        for (uint8_t i = 0; i < roster->missing_len; i++) {
+            missing_arr.add(roster->missing_ids[i]);
+        }
+    }
+    _enqueue_json(doc);
+}
+
 // ─── Robot status push ───────────────────────────────────────
 void uart_pi_send_robot_status(uint8_t robot_id, const char *status_str,
-                               const char *position, uint8_t battery) {
+                               const char *position, uint8_t battery, int8_t rssi_dbm) {
     static uint16_t s_seq = 0x8000; // use high range to differ from Pi seq
     StaticJsonDocument<PROTO_MAX_BYTES> doc;
     doc["version"] = PROTO_VERSION;
@@ -164,6 +190,7 @@ void uart_pi_send_robot_status(uint8_t robot_id, const char *status_str,
     p["status"]    = status_str;
     p["position"]  = position;
     p["battery"]   = battery;
+    p["rssi_dbm"]  = rssi_dbm;
     _enqueue_json(doc);
 }
 
@@ -180,17 +207,28 @@ void uart_pi_send_fault(const char *message, int robot_id) {
     _enqueue_json(doc);
 }
 
-// ─── System info / telemetry ─────────────────────────────────
-void uart_pi_send_system_info(uint8_t active_peers, uint32_t free_heap) {
+// ─── System info / telemetry (with online_ids & missing_ids) ─
+void uart_pi_send_system_info(const RosterSummary *roster, uint32_t free_heap) {
     static uint16_t s_seq = 0xE000;
     StaticJsonDocument<PROTO_MAX_BYTES> doc;
     doc["version"] = PROTO_VERSION;
     doc["seq"]     = s_seq++;
     doc["type"]    = MSG_SYSTEM_INFO;
     JsonObject p         = doc.createNestedObject("payload");
-    p["active_peers"]    = active_peers;
+    p["active_peers"]    = roster ? roster->active_count : 0;
+    p["total_robots"]    = MAX_ROBOTS;
     p["free_heap_bytes"] = free_heap;
     p["uptime_s"]        = (uint32_t)(millis() / 1000);
+    if (roster) {
+        JsonArray online_arr = p.createNestedArray("online_ids");
+        for (uint8_t i = 0; i < roster->online_len; i++) {
+            online_arr.add(roster->online_ids[i]);
+        }
+        JsonArray missing_arr = p.createNestedArray("missing_ids");
+        for (uint8_t i = 0; i < roster->missing_len; i++) {
+            missing_arr.add(roster->missing_ids[i]);
+        }
+    }
     _enqueue_json(doc);
 }
 

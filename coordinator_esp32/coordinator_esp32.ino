@@ -133,58 +133,66 @@ static void task_robot_status(void *param) {
         RobotInfo *ri = robot_registry_get(pkt.robot_id);
         if (!ri) continue;
 
-        Serial.printf("[ROBOT] id=%d status=%d move=%d wp=%d batt=%d%%\n",
+        Serial.printf("[ROBOT] id=%d status=%d move=%d wp=%d batt=%d%% rssi=%d err=%d\n",
                       pkt.robot_id, pkt.status,
-                      pkt.move_id, pkt.wp_index, pkt.battery_pct);
+                      pkt.move_id, pkt.wp_index, pkt.battery_pct,
+                      pkt.rssi_dbm, pkt.error_code);
 
-        // Signal ACK event so cmd_handler can unblock
-        if (pkt.status == ROBOT_STATUS_REACHED ||
-            pkt.status == ROBOT_STATUS_ARRIVED ||
-            pkt.status == ROBOT_STATUS_PONG) {
-            EventBits_t bit = (1 << (pkt.robot_id - 1));
-            xEventGroupSetBits(xRobotAckEvent, bit);
-        }
-
-        // Push robot_status to Pi for Dashboard display
         const char *state_str = robot_state_str(ri->state);
         char pos[8];
         snprintf(pos, sizeof(pos), "%d", pkt.wp_index);
 
-        if (pkt.status == ROBOT_STATUS_ERROR) {
+        // Phan loai tin hieu ACK thanh cong vs tin hieu LOI tuc thoi
+        if (pkt.status == ROBOT_STATUS_REACHED ||
+            pkt.status == ROBOT_STATUS_ARRIVED ||
+            pkt.status == ROBOT_STATUS_PONG) {
+            xEventGroupSetBits(xRobotAckEvent, ROBOT_ACK_BIT(pkt.robot_id));
+        } else if (pkt.status == ROBOT_STATUS_ERROR) {
+            // Danh thuc handle_waypoint ngay lap tuc bang bit LOI (khong bao nham completed)
+            xEventGroupSetBits(xRobotAckEvent, ROBOT_ERR_BIT(pkt.robot_id));
             char msg[64];
             snprintf(msg, sizeof(msg), "robot_%d_error_code_%d",
                      pkt.robot_id, pkt.error_code);
             uart_pi_send_fault(msg, pkt.robot_id);
-        } else {
-            uart_pi_send_robot_status(pkt.robot_id, state_str, pos,
-                                      pkt.battery_pct);
         }
+
+        // Chuyen tiep trang thai tuc thoi len Pi 3 cho moi goi hop le (IDLE, MOVING, ARRIVED, ERROR, PONG)
+        uart_pi_send_robot_status(pkt.robot_id, state_str, pos,
+                                  pkt.battery_pct, pkt.rssi_dbm);
     }
 }
 
 // =============================================================
 // Task: heartbeat_task
-// Sends system telemetry to Pi every HEARTBEAT_INTERVAL_MS.
-// Pings any robot that has not been heard from recently.
+// Sends system telemetry (with online_ids & missing_ids) to Pi
+// every HEARTBEAT_INTERVAL_MS and detects offline robots.
 // =============================================================
 static void task_heartbeat(void *param) {
     for (;;) {
         vTaskDelay(pdMS_TO_TICKS(HEARTBEAT_INTERVAL_MS));
 
-        // Count active (non-offline) robots
-        uint8_t active = 0;
-        uint32_t now   = (uint32_t)millis();
+        uint32_t now = (uint32_t)millis();
         for (int i = 1; i <= MAX_ROBOTS; i++) {
             RobotInfo *ri = robot_registry_get(i);
             if (!ri) continue;
-            if (ri->state != RSTATE_OFFLINE) active++;
-            // Ping silent robots (no status in last 10 s)
-            if (now - ri->last_seen_ms > 10000 && ri->state != RSTATE_OFFLINE) {
+            // Neu xe im lang > 5s, gui goi ping nhac xe phan hoi
+            if (ri->state != RSTATE_OFFLINE && (uint32_t)(now - ri->last_seen_ms) > 5000) {
                 espnow_ping(i);
             }
         }
 
-        uart_pi_send_system_info(active, esp_get_free_heap_size());
+        // Kiem tra cac xe qua han > 10s khong phan hoi -> danh dau OFFLINE va bao ngay len Pi 3
+        uint8_t newly_offline[MAX_ROBOTS] = {0};
+        uint8_t offline_cnt = robot_registry_check_timeouts(ROBOT_OFFLINE_TIMEOUT_MS, newly_offline);
+        for (uint8_t k = 0; k < offline_cnt; k++) {
+            uint8_t rid = newly_offline[k];
+            Serial.printf("[HEARTBEAT] Robot %u timed out -> OFFLINE\n", rid);
+            uart_pi_send_robot_status(rid, "offline", "UNKNOWN", 0, 0);
+        }
+
+        RosterSummary roster;
+        robot_registry_get_roster(&roster);
+        uart_pi_send_system_info(&roster, esp_get_free_heap_size());
         digitalWrite(PIN_LED, !digitalRead(PIN_LED)); // heartbeat blink
     }
 }

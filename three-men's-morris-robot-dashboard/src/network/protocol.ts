@@ -96,6 +96,9 @@ export type WSServerEvent =
       coordinator_connected: boolean;
       coordinator_device: string;
       coordinator_error: string | null;
+      active_peers?: number;
+      online_ids?: number[];
+      missing_ids?: number[];
       robots: {
         robot_id: number;
         team: 1 | 2;

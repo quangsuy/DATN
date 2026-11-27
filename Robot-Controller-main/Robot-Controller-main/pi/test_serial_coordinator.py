@@ -85,6 +85,52 @@ class SerialCoordinatorTests(unittest.TestCase):
         self.assertEqual(len(set(sequences)), 2, "sequence numbers must be unique")
         self.assertEqual(set(move_ids), {42}, "move_id must be fixed at 42")
 
+    def test_ping_roster_identifies_online_and_missing_robots(self):
+        """ping_roster(robot_id=0) parses online_ids and missing_ids from Coordinator ACK."""
+        class RosterSerial:
+            def __init__(self):
+                self.writes = []
+                self.responses = []
+
+            def write(self, data):
+                self.writes.append(data)
+                msg = decode_message(data)
+                # Simulate Coordinator receiving robot_status from Xe 1..5 and returning roster ACK
+                self.responses.append(
+                    encode_message(32768, "robot_status", {"robot_id": 1, "status": "idle", "position": "0", "battery": 95})
+                )
+                self.responses.append(
+                    encode_message(
+                        msg.sequence,
+                        "ack",
+                        {
+                            "status": "completed",
+                            "robot_id": 0,
+                            "active_peers": 5,
+                            "total_robots": 6,
+                            "online_ids": [1, 2, 3, 4, 5],
+                            "missing_ids": [6],
+                        },
+                    )
+                )
+
+            def readline(self):
+                return self.responses.pop(0) if self.responses else b""
+
+        events = []
+        port = RosterSerial()
+        transport = SerialCoordinatorTransport(port, ack_timeout_s=0.05, on_event=events.append)
+        roster = transport.ping_roster(timeout_s=0.05)
+
+        sent = decode_message(port.writes[0])
+        self.assertEqual(sent.message_type, "ping")
+        self.assertEqual(sent.payload["robot_id"], 0)
+        self.assertEqual(roster["active_peers"], 5)
+        self.assertEqual(roster["online_ids"], [1, 2, 3, 4, 5])
+        self.assertEqual(roster["missing_ids"], [6])
+        self.assertEqual(transport.robot_states[1]["status"], "idle")
+        self.assertEqual(events[0]["type"], "robot_status")
+
 
 if __name__ == "__main__":
     unittest.main()

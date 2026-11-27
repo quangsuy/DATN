@@ -723,6 +723,41 @@ export const GameModeScreen: React.FC<GameModeScreenProps> = ({ onStartGame, onB
                 </span>
               </div>
 
+              {/* Cảnh báo chỉ đích danh xe nào đang có mặt / xe nào đang vắng mặt */}
+              {!preFlight.checking && (
+                <div
+                  className={`rounded-xl border px-3 py-2 text-xs font-mono flex flex-wrap items-center justify-between gap-2 ${
+                    espnowReadyCount === 6
+                      ? 'border-emerald-500/40 bg-emerald-950/30 text-emerald-300'
+                      : 'border-amber-500/40 bg-amber-950/30 text-amber-200'
+                  }`}
+                >
+                  <div>
+                    <span className="font-bold">
+                      Sĩ số ESP-NOW: {espnowReadyCount}/6 xe
+                    </span>
+                    {espnowReadyCount > 0 && (
+                      <span className="ml-2 text-emerald-300">
+                        • Có mặt:{' '}
+                        {preFlight.robots
+                          .filter((r) => r.espnow_ok)
+                          .map((r) => `Xe #${r.robot_id}`)
+                          .join(', ')}
+                      </span>
+                    )}
+                  </div>
+                  {espnowReadyCount < 6 && (
+                    <span className="font-bold text-rose-300">
+                      ⚠️ Thiếu xe:{' '}
+                      {preFlight.robots
+                        .filter((r) => !r.espnow_ok)
+                        .map((r) => `Xe #${r.robot_id}`)
+                        .join(', ')}
+                    </span>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {preFlight.robots.map((r) => {
                   const tColor = r.team === 1 ? team1Color : team2Color;

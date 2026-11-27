@@ -601,23 +601,46 @@ class MorrisBackend:
 
         coordinator_connected = hw_transport is not None
 
-        # 3. Ping 6 robots via Coordinator ESP-NOW
+        # 3. Ping 6 robots via Coordinator ESP-NOW (ưu tiên điểm danh đồng loạt robot_id=0)
         robot_checks: List[Dict[str, Any]] = []
+        ping_roster_fn = getattr(hw_transport, "ping_roster", None) if hw_transport is not None else None
         ping_fn = getattr(hw_transport, "ping_robot", None) if hw_transport is not None else None
+
+        online_set = set()
+        used_batch_roster = False
+        if callable(ping_roster_fn):
+            try:
+                roster_res = ping_roster_fn(timeout_s=0.8)
+                if isinstance(roster_res, dict) and ("online_ids" in roster_res or "missing_ids" in roster_res):
+                    online_set = {int(x) for x in roster_res.get("online_ids", [])}
+                    used_batch_roster = True
+            except Exception:
+                used_batch_roster = False
+
+        online_ids: List[int] = []
+        missing_ids: List[int] = []
         all_robots_ok = True
         for rid in range(1, 7):
-            espnow_ok = False
-            if callable(ping_fn):
+            if used_batch_roster:
+                espnow_ok = rid in online_set
+            elif callable(ping_fn):
                 try:
                     espnow_ok = bool(ping_fn(rid, timeout_s=0.45))
                 except Exception:
                     espnow_ok = False
+            else:
+                espnow_ok = False
+
+            if espnow_ok:
+                online_ids.append(rid)
+            else:
+                missing_ids.append(rid)
+                all_robots_ok = False
+
             qr_seen = rid in markers_seen or str(rid) in cam_robots
             pose_info = cam_robots.get(str(rid)) or cam_robots.get(rid)
             if rid in self.robots:
                 self.robots[rid].status = "idle" if espnow_ok else "offline"
-            if not espnow_ok:
-                all_robots_ok = False
             robot_checks.append(
                 {
                     "robot_id": rid,
@@ -644,6 +667,9 @@ class MorrisBackend:
             coordinator_connected=coordinator_connected,
             coordinator_device=serial_device,
             coordinator_error=coordinator_error,
+            active_peers=len(online_ids),
+            online_ids=online_ids,
+            missing_ids=missing_ids,
             robots=robot_checks,
         )
 
